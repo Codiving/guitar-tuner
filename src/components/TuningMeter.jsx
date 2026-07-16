@@ -111,3 +111,4 @@ export function TuningMeter({ cents }) {
     </div>
   );
 }
+console.log(123);
