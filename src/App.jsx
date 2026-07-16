@@ -42,8 +42,9 @@ function App() {
   const guitarString = pitch?.guitarString;
   const isInTune     = cents != null && Math.abs(cents) < 5;
 
-  const displayNote   = guitarString?.note   ?? noteInfo?.noteName;
-  const displayOctave = guitarString?.octave ?? noteInfo?.octave;
+  // 실제 감지된 음을 그대로 표시 (getNoteInfo가 이미 useFlats 반영)
+  const displayNote   = noteInfo?.noteName;
+  const displayOctave = noteInfo?.octave;
 
   const handleStringClick = (gs) => {
     setTargetString(prev => prev?.string === gs.string ? null : gs);

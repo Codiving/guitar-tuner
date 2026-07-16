@@ -53,7 +53,7 @@ export function usePitchDetection({
 
     // 음이 크게 바뀌면 히스토리 초기화 (현 교체 시)
     const rawNoteNum = Math.round(12 * Math.log2(result.freq / optionsRef.current.a4) + 69);
-    if (lastNoteNumRef.current !== null && Math.abs(rawNoteNum - lastNoteNumRef.current) > 1) {
+    if (lastNoteNumRef.current !== null && Math.abs(rawNoteNum - lastNoteNumRef.current) >= 1) {
       freqHistoryRef.current = [];
     }
     lastNoteNumRef.current = rawNoteNum;
