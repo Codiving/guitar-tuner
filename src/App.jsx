@@ -41,6 +41,13 @@ export default function App() {
       <main className="app-main">
         {/* 중앙 콘텐츠 */}
         <div className="main-content">
+          <button
+            className={`toggle-btn ${isListening ? 'listening' : ''}`}
+            onClick={isListening ? stop : start}
+          >
+            {isListening ? <><span className="btn-dot" />감지 중지</> : '튜닝 시작'}
+          </button>
+
           <div className="note-display">
             {error ? (
               <ErrorBlock error={error} onRetry={start} />
@@ -91,12 +98,6 @@ export default function App() {
             />
           </div>
 
-          <button
-            className={`toggle-btn ${isListening ? 'listening' : ''}`}
-            onClick={isListening ? stop : start}
-          >
-            {isListening ? <><span className="btn-dot" />감지 중지</> : '튜닝 시작'}
-          </button>
         </div>
       </main>
     </div>
