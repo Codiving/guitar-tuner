@@ -204,8 +204,16 @@ html, body, #root { height: 100%; width: 100%; }
 .sensitivity-labels {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 11px;
   color: var(--text-muted);
+}
+
+.sensitivity-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
 }
 
 .sensitivity-slider {

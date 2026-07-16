@@ -7,22 +7,11 @@ import {
   GUITAR_STRINGS,
 } from '../utils/pitchDetector';
 
-// sensitivity: 1(낮음) ~ 10(높음) → 파라미터 선형 보간
-function buildConfig(sensitivity) {
-  const t = (sensitivity - 1) / 9;
-  const lerp = (a, b) => a + (b - a) * t;
-  return {
-    rmsMin:     lerp(0.03,  0.005),
-    rmsWeak:    lerp(0.08,  0.015),
-    confidence: lerp(0.7,   0.3),
-    history:    Math.round(lerp(14, 6)),
-  };
-}
+const DETECT_CONFIG = { rmsMin: 0.015, rmsWeak: 0.04, confidence: 0.5, history: 10 };
 
 export function usePitchDetection({
   tuningStrings = GUITAR_STRINGS,
   targetString  = null,
-  sensitivity   = 5,
 } = {}) {
   const [isListening,  setIsListening]  = useState(false);
   const [pitch,        setPitch]        = useState(null);
@@ -38,17 +27,15 @@ export function usePitchDetection({
   const freqHistoryRef   = useRef([]);
   const lastNoteNumRef   = useRef(null);
 
-  const optionsRef = useRef({ tuningStrings, targetString, sensitivity });
-  optionsRef.current = { tuningStrings, targetString, sensitivity };
+  const optionsRef = useRef({ tuningStrings, targetString });
+  optionsRef.current = { tuningStrings, targetString };
 
   const detect = useCallback(() => {
     if (!analyserRef.current) return;
 
     analyserRef.current.getFloatTimeDomainData(bufferRef.current);
 
-    const { sensitivity: sens } = optionsRef.current;
-    const cfg = buildConfig(sens);
-    const result = autoCorrelate(bufferRef.current, audioContextRef.current.sampleRate, cfg);
+    const result = autoCorrelate(bufferRef.current, audioContextRef.current.sampleRate, DETECT_CONFIG);
 
     if (result.status !== 'ok') {
       if (result.status === 'silent' || result.status === 'weak') {
@@ -69,7 +56,7 @@ export function usePitchDetection({
 
     const history = freqHistoryRef.current;
     history.push(result.freq);
-    if (history.length > cfg.history) history.shift();
+    if (history.length > DETECT_CONFIG.history) history.shift();
     const sorted = [...history].sort((a, b) => a - b);
     const smoothedFreq = sorted[Math.floor(sorted.length / 2)];
 

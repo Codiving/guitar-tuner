@@ -13,21 +13,25 @@ const SIGNAL_MESSAGES = {
 };
 
 export default function App() {
-  const [sensitivity, setSensitivity] = useLocalStorage('gt-sensitivity', 5);
+  // hzTolerance: 감지된 주파수와 목표 주파수의 허용 오차 (Hz)
+  const [hzTolerance, setHzTolerance] = useLocalStorage('gt-hz-tolerance', 3);
   const [targetString, setTargetString] = useState(null);
 
   const { isListening, pitch, signalStatus, error, start, stop } = usePitchDetection({
     tuningStrings: GUITAR_STRINGS,
     targetString,
-    sensitivity,
   });
 
   const cents        = pitch?.cents ?? null;
   const noteInfo     = pitch?.noteInfo;
   const guitarString = pitch?.guitarString;
-  const isInTune     = cents != null && Math.abs(cents) < 5;
 
-  const fillPct = `${((sensitivity - 1) / 9) * 100}%`;
+  // 목표 주파수 기준으로 Hz 오차를 계산해 IN TUNE 판정
+  const targetFreq = guitarString?.freq ?? noteInfo?.targetFreq;
+  const isInTune   = pitch != null && targetFreq != null
+    && Math.abs(pitch.freq - targetFreq) < hzTolerance;
+
+  const fillPct = `${((hzTolerance - 1) / 4) * 100}%`;
 
   return (
     <div className="app">
@@ -80,20 +84,20 @@ export default function App() {
           )}
         </div>
 
-        <TuningMeter cents={cents} />
+        <TuningMeter cents={cents} isInTune={isInTune} />
 
         <div className="sensitivity-wrap">
           <div className="sensitivity-labels">
-            <span>낮음</span>
-            <span>감도</span>
-            <span>높음</span>
+            <span>엄격</span>
+            <span className="sensitivity-value">±{hzTolerance} Hz</span>
+            <span>유연</span>
           </div>
           <input
             type="range"
             className="sensitivity-slider"
-            min={1} max={10} step={1}
-            value={sensitivity}
-            onChange={e => setSensitivity(Number(e.target.value))}
+            min={1} max={5} step={1}
+            value={hzTolerance}
+            onChange={e => setHzTolerance(Number(e.target.value))}
             style={{ '--fill': fillPct }}
           />
         </div>

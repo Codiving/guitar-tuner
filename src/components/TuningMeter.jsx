@@ -1,8 +1,7 @@
-export function TuningMeter({ cents }) {
+export function TuningMeter({ cents, isInTune = false }) {
   const hasCents = cents != null;
   const clampedCents = Math.max(-50, Math.min(50, cents ?? 0));
   const rotation = (clampedCents / 50) * 70;
-  const isInTune = hasCents && Math.abs(cents) < 5;
 
   const getDirectionInfo = () => {
     if (!hasCents) return null;
@@ -111,4 +110,3 @@ export function TuningMeter({ cents }) {
     </div>
   );
 }
-console.log(123);
