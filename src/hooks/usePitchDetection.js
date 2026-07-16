@@ -4,41 +4,51 @@ import {
   getNoteInfo,
   findClosestString,
   getCentsFromTarget,
-  SENSITIVITY_PRESETS,
+  GUITAR_STRINGS,
 } from '../utils/pitchDetector';
 
+// sensitivity: 1(낮음) ~ 10(높음) → 파라미터 선형 보간
+function buildConfig(sensitivity) {
+  const t = (sensitivity - 1) / 9;
+  const lerp = (a, b) => a + (b - a) * t;
+  return {
+    rmsMin:     lerp(0.03,  0.005),
+    rmsWeak:    lerp(0.08,  0.015),
+    confidence: lerp(0.7,   0.3),
+    history:    Math.round(lerp(14, 6)),
+  };
+}
+
 export function usePitchDetection({
-  a4 = 440,
-  tuningStrings = [],
-  targetString = null,
-  useFlats = false,
-  sensitivityConfig = SENSITIVITY_PRESETS.normal,
+  tuningStrings = GUITAR_STRINGS,
+  targetString  = null,
+  sensitivity   = 5,
 } = {}) {
-  const [isListening, setIsListening] = useState(false);
-  const [pitch, setPitch] = useState(null);
-  // 'idle' | 'silent' | 'weak' | 'unstable' | 'detecting'
+  const [isListening,  setIsListening]  = useState(false);
+  const [pitch,        setPitch]        = useState(null);
   const [signalStatus, setSignalStatus] = useState('idle');
-  const [error, setError] = useState(null);
+  const [error,        setError]        = useState(null);
 
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-  const sourceRef = useRef(null);
-  const streamRef = useRef(null);
-  const rafRef = useRef(null);
-  const bufferRef = useRef(null);
-  const freqHistoryRef = useRef([]);
-  const lastNoteNumRef = useRef(null);
+  const audioContextRef  = useRef(null);
+  const analyserRef      = useRef(null);
+  const sourceRef        = useRef(null);
+  const streamRef        = useRef(null);
+  const rafRef           = useRef(null);
+  const bufferRef        = useRef(null);
+  const freqHistoryRef   = useRef([]);
+  const lastNoteNumRef   = useRef(null);
 
-  const optionsRef = useRef({ a4, tuningStrings, targetString, useFlats, sensitivityConfig });
-  optionsRef.current = { a4, tuningStrings, targetString, useFlats, sensitivityConfig };
+  const optionsRef = useRef({ tuningStrings, targetString, sensitivity });
+  optionsRef.current = { tuningStrings, targetString, sensitivity };
 
   const detect = useCallback(() => {
     if (!analyserRef.current) return;
 
     analyserRef.current.getFloatTimeDomainData(bufferRef.current);
 
-    const { sensitivityConfig: sc } = optionsRef.current;
-    const result = autoCorrelate(bufferRef.current, audioContextRef.current.sampleRate, sc);
+    const { sensitivity: sens } = optionsRef.current;
+    const cfg = buildConfig(sens);
+    const result = autoCorrelate(bufferRef.current, audioContextRef.current.sampleRate, cfg);
 
     if (result.status !== 'ok') {
       if (result.status === 'silent' || result.status === 'weak') {
@@ -51,26 +61,22 @@ export function usePitchDetection({
       return;
     }
 
-    // 음이 크게 바뀌면 히스토리 초기화 (현 교체 시)
-    const rawNoteNum = Math.round(12 * Math.log2(result.freq / optionsRef.current.a4) + 69);
+    const rawNoteNum = Math.round(12 * Math.log2(result.freq / 440) + 69);
     if (lastNoteNumRef.current !== null && Math.abs(rawNoteNum - lastNoteNumRef.current) >= 1) {
       freqHistoryRef.current = [];
     }
     lastNoteNumRef.current = rawNoteNum;
 
-    // 중앙값으로 스무딩 (감도 프리셋의 history 크기 사용)
     const history = freqHistoryRef.current;
     history.push(result.freq);
-    if (history.length > sc.history) history.shift();
+    if (history.length > cfg.history) history.shift();
     const sorted = [...history].sort((a, b) => a - b);
     const smoothedFreq = sorted[Math.floor(sorted.length / 2)];
 
-    const { a4: currentA4, tuningStrings: strings, targetString: target, useFlats: flats } = optionsRef.current;
-    const noteInfo = getNoteInfo(smoothedFreq, currentA4, flats);
+    const { tuningStrings: strings, targetString: target } = optionsRef.current;
+    const noteInfo = getNoteInfo(smoothedFreq);
 
-    let cents;
-    let guitarString;
-
+    let cents, guitarString;
     if (target) {
       cents = getCentsFromTarget(smoothedFreq, target.freq);
       guitarString = target;

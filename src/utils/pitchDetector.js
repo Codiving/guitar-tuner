@@ -1,53 +1,13 @@
 const NOTE_STRINGS_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const NOTE_STRINGS_FLAT  = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 
-export const TUNING_PRESETS = {
-  standard: {
-    label: '표준',
-    sublabel: 'E A D G B E',
-    useFlats: false,
-    strings: [
-      { name: 'E2', note: 'E', octave: 2, freq: 82.41,  string: 6 },
-      { name: 'A2', note: 'A', octave: 2, freq: 110.0,  string: 5 },
-      { name: 'D3', note: 'D', octave: 3, freq: 146.83, string: 4 },
-      { name: 'G3', note: 'G', octave: 3, freq: 196.0,  string: 3 },
-      { name: 'B3', note: 'B', octave: 3, freq: 246.94, string: 2 },
-      { name: 'E4', note: 'E', octave: 4, freq: 329.63, string: 1 },
-    ],
-  },
-  dropD: {
-    label: 'Drop D',
-    sublabel: 'D A D G B E',
-    useFlats: false,
-    strings: [
-      { name: 'D2', note: 'D', octave: 2, freq: 73.42,  string: 6 },
-      { name: 'A2', note: 'A', octave: 2, freq: 110.0,  string: 5 },
-      { name: 'D3', note: 'D', octave: 3, freq: 146.83, string: 4 },
-      { name: 'G3', note: 'G', octave: 3, freq: 196.0,  string: 3 },
-      { name: 'B3', note: 'B', octave: 3, freq: 246.94, string: 2 },
-      { name: 'E4', note: 'E', octave: 4, freq: 329.63, string: 1 },
-    ],
-  },
-  halfDown: {
-    label: '반음↓',
-    sublabel: 'Eb Ab Db Gb Bb Eb',
-    useFlats: true,
-    strings: [
-      { name: 'Eb2', note: 'Eb', octave: 2, freq: 77.78,  string: 6 },
-      { name: 'Ab2', note: 'Ab', octave: 2, freq: 103.83, string: 5 },
-      { name: 'Db3', note: 'Db', octave: 3, freq: 138.59, string: 4 },
-      { name: 'Gb3', note: 'Gb', octave: 3, freq: 185.0,  string: 3 },
-      { name: 'Bb3', note: 'Bb', octave: 3, freq: 233.08, string: 2 },
-      { name: 'Eb4', note: 'Eb', octave: 4, freq: 311.13, string: 1 },
-    ],
-  },
-};
-
-export const SENSITIVITY_PRESETS = {
-  high:   { label: '높음', rmsMin: 0.005, rmsWeak: 0.015, confidence: 0.3, history: 6  },
-  normal: { label: '보통', rmsMin: 0.015, rmsWeak: 0.04,  confidence: 0.5, history: 10 },
-  low:    { label: '낮음', rmsMin: 0.03,  rmsWeak: 0.08,  confidence: 0.7, history: 14 },
-};
+export const GUITAR_STRINGS = [
+  { name: 'E2', note: 'E', octave: 2, freq: 82.41,  string: 6 },
+  { name: 'A2', note: 'A', octave: 2, freq: 110.0,  string: 5 },
+  { name: 'D3', note: 'D', octave: 3, freq: 146.83, string: 4 },
+  { name: 'G3', note: 'G', octave: 3, freq: 196.0,  string: 3 },
+  { name: 'B3', note: 'B', octave: 3, freq: 246.94, string: 2 },
+  { name: 'E4', note: 'E', octave: 4, freq: 329.63, string: 1 },
+];
 
 // Returns { status: 'silent'|'weak'|'unstable'|'ok', freq, rms }
 export function autoCorrelate(buffer, sampleRate, { rmsMin = 0.015, rmsWeak = 0.04, confidence = 0.5 } = {}) {
@@ -87,7 +47,6 @@ export function autoCorrelate(buffer, sampleRate, { rmsMin = 0.015, rmsWeak = 0.
   const bv = (x3 - x1) / 2;
   if (a) T0 -= bv / (2 * a);
 
-  // 상관 신뢰도가 낮으면 노이즈로 판단
   if (c[0] > 0 && maxval / c[0] < confidence) return { status: 'unstable', freq: -1, rms };
 
   const freq = sampleRate / T0;
@@ -95,11 +54,10 @@ export function autoCorrelate(buffer, sampleRate, { rmsMin = 0.015, rmsWeak = 0.
   return { status: 'ok', freq, rms };
 }
 
-export function getNoteInfo(freq, a4 = 440, useFlats = false) {
+export function getNoteInfo(freq, a4 = 440) {
   if (freq <= 0) return null;
   const noteNum = Math.round(12 * Math.log2(freq / a4) + 69);
-  const noteStrings = useFlats ? NOTE_STRINGS_FLAT : NOTE_STRINGS_SHARP;
-  const noteName = noteStrings[((noteNum % 12) + 12) % 12];
+  const noteName = NOTE_STRINGS_SHARP[((noteNum % 12) + 12) % 12];
   const octave = Math.floor(noteNum / 12) - 1;
   const targetFreq = a4 * Math.pow(2, (noteNum - 69) / 12);
   const cents = 1200 * Math.log2(freq / targetFreq);
