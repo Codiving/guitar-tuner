@@ -90,15 +90,14 @@ export default function App() {
               style={{ '--fill': fillPct }}
             />
           </div>
-        </div>
 
-        {/* 하단 버튼 */}
-        <button
-          className={`toggle-btn ${isListening ? 'listening' : ''}`}
-          onClick={isListening ? stop : start}
-        >
-          {isListening ? <><span className="btn-dot" />감지 중지</> : '튜닝 시작'}
-        </button>
+          <button
+            className={`toggle-btn ${isListening ? 'listening' : ''}`}
+            onClick={isListening ? stop : start}
+          >
+            {isListening ? <><span className="btn-dot" />감지 중지</> : '튜닝 시작'}
+          </button>
+        </div>
       </main>
     </div>
   );
