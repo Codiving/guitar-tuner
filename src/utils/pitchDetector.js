@@ -43,13 +43,19 @@ export const TUNING_PRESETS = {
   },
 };
 
+export const SENSITIVITY_PRESETS = {
+  high:   { label: '높음', rmsMin: 0.005, rmsWeak: 0.015, confidence: 0.3, history: 6  },
+  normal: { label: '보통', rmsMin: 0.015, rmsWeak: 0.04,  confidence: 0.5, history: 10 },
+  low:    { label: '낮음', rmsMin: 0.03,  rmsWeak: 0.08,  confidence: 0.7, history: 14 },
+};
+
 // Returns { status: 'silent'|'weak'|'unstable'|'ok', freq, rms }
-export function autoCorrelate(buffer, sampleRate) {
+export function autoCorrelate(buffer, sampleRate, { rmsMin = 0.015, rmsWeak = 0.04, confidence = 0.5 } = {}) {
   const SIZE = buffer.length;
   const rms = Math.sqrt(buffer.reduce((sum, v) => sum + v * v, 0) / SIZE);
 
-  if (rms < 0.005) return { status: 'silent', freq: -1, rms };
-  if (rms < 0.015) return { status: 'weak', freq: -1, rms };
+  if (rms < rmsMin)  return { status: 'silent', freq: -1, rms };
+  if (rms < rmsWeak) return { status: 'weak',   freq: -1, rms };
 
   let r1 = 0, r2 = SIZE - 1;
   for (let i = 0; i < SIZE / 2; i++) {
@@ -80,6 +86,9 @@ export function autoCorrelate(buffer, sampleRate) {
   const a = (x1 + x3 - 2 * x2) / 2;
   const bv = (x3 - x1) / 2;
   if (a) T0 -= bv / (2 * a);
+
+  // 상관 신뢰도가 낮으면 노이즈로 판단
+  if (c[0] > 0 && maxval / c[0] < confidence) return { status: 'unstable', freq: -1, rms };
 
   const freq = sampleRate / T0;
   if (freq < 60 || freq > 1200) return { status: 'unstable', freq: -1, rms };

@@ -4,11 +4,16 @@ import {
   getNoteInfo,
   findClosestString,
   getCentsFromTarget,
+  SENSITIVITY_PRESETS,
 } from '../utils/pitchDetector';
 
-const HISTORY_SIZE = 6;
-
-export function usePitchDetection({ a4 = 440, tuningStrings = [], targetString = null, useFlats = false } = {}) {
+export function usePitchDetection({
+  a4 = 440,
+  tuningStrings = [],
+  targetString = null,
+  useFlats = false,
+  sensitivityConfig = SENSITIVITY_PRESETS.normal,
+} = {}) {
   const [isListening, setIsListening] = useState(false);
   const [pitch, setPitch] = useState(null);
   // 'idle' | 'silent' | 'weak' | 'unstable' | 'detecting'
@@ -24,15 +29,16 @@ export function usePitchDetection({ a4 = 440, tuningStrings = [], targetString =
   const freqHistoryRef = useRef([]);
   const lastNoteNumRef = useRef(null);
 
-  // Keep latest options accessible from the detect loop without re-creating it
-  const optionsRef = useRef({ a4, tuningStrings, targetString, useFlats });
-  optionsRef.current = { a4, tuningStrings, targetString, useFlats };
+  const optionsRef = useRef({ a4, tuningStrings, targetString, useFlats, sensitivityConfig });
+  optionsRef.current = { a4, tuningStrings, targetString, useFlats, sensitivityConfig };
 
   const detect = useCallback(() => {
     if (!analyserRef.current) return;
 
     analyserRef.current.getFloatTimeDomainData(bufferRef.current);
-    const result = autoCorrelate(bufferRef.current, audioContextRef.current.sampleRate);
+
+    const { sensitivityConfig: sc } = optionsRef.current;
+    const result = autoCorrelate(bufferRef.current, audioContextRef.current.sampleRate, sc);
 
     if (result.status !== 'ok') {
       if (result.status === 'silent' || result.status === 'weak') {
@@ -45,17 +51,17 @@ export function usePitchDetection({ a4 = 440, tuningStrings = [], targetString =
       return;
     }
 
-    // Reset history when the note jumps (string change)
+    // 음이 크게 바뀌면 히스토리 초기화 (현 교체 시)
     const rawNoteNum = Math.round(12 * Math.log2(result.freq / optionsRef.current.a4) + 69);
     if (lastNoteNumRef.current !== null && Math.abs(rawNoteNum - lastNoteNumRef.current) > 1) {
       freqHistoryRef.current = [];
     }
     lastNoteNumRef.current = rawNoteNum;
 
-    // Smooth via median
+    // 중앙값으로 스무딩 (감도 프리셋의 history 크기 사용)
     const history = freqHistoryRef.current;
     history.push(result.freq);
-    if (history.length > HISTORY_SIZE) history.shift();
+    if (history.length > sc.history) history.shift();
     const sorted = [...history].sort((a, b) => a - b);
     const smoothedFreq = sorted[Math.floor(sorted.length / 2)];
 

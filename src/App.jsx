@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { usePitchDetection } from './hooks/usePitchDetection';
+import { useLocalStorage } from './hooks/useLocalStorage';
 import { TuningMeter } from './components/TuningMeter';
 import { StringSelector } from './components/StringSelector';
-import { TUNING_PRESETS } from './utils/pitchDetector';
+import { TUNING_PRESETS, SENSITIVITY_PRESETS } from './utils/pitchDetector';
 import './App.css';
 
 const A4_OPTIONS = [432, 440, 442];
 const PRESET_KEYS = Object.keys(TUNING_PRESETS);
+const SENSITIVITY_KEYS = Object.keys(SENSITIVITY_PRESETS);
 
 const SIGNAL_MESSAGES = {
   silent:   { text: '소리가 감지되지 않아요', cls: 'status-muted' },
@@ -15,30 +17,33 @@ const SIGNAL_MESSAGES = {
 };
 
 function App() {
-  const [preset, setPreset] = useState('standard');
-  const [a4, setA4] = useState(440);
+  const [preset, setPreset]           = useLocalStorage('gt-preset',      'standard');
+  const [a4, setA4]                   = useLocalStorage('gt-a4',          440);
+  const [sensitivityKey, setSensKey]  = useLocalStorage('gt-sensitivity', 'normal');
+
   const [targetString, setTargetString] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
 
-  const currentPreset = TUNING_PRESETS[preset];
-  const tuningStrings = currentPreset.strings;
-  const useFlats = currentPreset.useFlats ?? false;
+  const currentPreset      = TUNING_PRESETS[preset] ?? TUNING_PRESETS.standard;
+  const tuningStrings      = currentPreset.strings;
+  const useFlats           = currentPreset.useFlats ?? false;
+  const sensitivityConfig  = SENSITIVITY_PRESETS[sensitivityKey] ?? SENSITIVITY_PRESETS.normal;
 
   const { isListening, pitch, signalStatus, error, start, stop } = usePitchDetection({
     a4,
     tuningStrings,
     targetString,
     useFlats,
+    sensitivityConfig,
   });
 
-  const cents = pitch?.cents ?? null;
-  const noteInfo = pitch?.noteInfo;
+  const cents        = pitch?.cents ?? null;
+  const noteInfo     = pitch?.noteInfo;
   const guitarString = pitch?.guitarString;
-  const isInTune = cents != null && Math.abs(cents) < 5;
+  const isInTune     = cents != null && Math.abs(cents) < 5;
 
-  // 매칭된 기타 현이 있으면 프리셋 표기 그대로 사용해 샤프/플랫 일관성 유지
-  const displayNote   = guitarString?.note    ?? noteInfo?.noteName;
-  const displayOctave = guitarString?.octave  ?? noteInfo?.octave;
+  const displayNote   = guitarString?.note   ?? noteInfo?.noteName;
+  const displayOctave = guitarString?.octave ?? noteInfo?.octave;
 
   const handleStringClick = (gs) => {
     setTargetString(prev => prev?.string === gs.string ? null : gs);
@@ -84,6 +89,20 @@ function App() {
                   onClick={() => setA4(val)}
                 >
                   {val} Hz
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="settings-row">
+            <span className="settings-label">감도</span>
+            <div className="settings-options">
+              {SENSITIVITY_KEYS.map(key => (
+                <button
+                  key={key}
+                  className={`option-pill ${sensitivityKey === key ? 'selected' : ''}`}
+                  onClick={() => setSensKey(key)}
+                >
+                  {SENSITIVITY_PRESETS[key].label}
                 </button>
               ))}
             </div>
