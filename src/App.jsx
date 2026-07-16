@@ -1,32 +1,26 @@
-import { useState } from 'react';
 import { usePitchDetection } from './hooks/usePitchDetection';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { TuningMeter } from './components/TuningMeter';
-import { StringSelector } from './components/StringSelector';
 import { GUITAR_STRINGS } from './utils/pitchDetector';
 import './App.css';
 
 const SIGNAL_MESSAGES = {
   silent:   { text: '소리가 감지되지 않아요', cls: 'status-muted' },
-  weak:     { text: '입력이 너무 약해요', cls: 'status-warning' },
-  unstable: { text: '감지 중...', cls: 'status-muted' },
+  weak:     { text: '입력이 너무 약해요',       cls: 'status-warning' },
+  unstable: { text: '감지 중...',                cls: 'status-muted' },
 };
 
 export default function App() {
-  // hzTolerance: 감지된 주파수와 목표 주파수의 허용 오차 (Hz)
   const [hzTolerance, setHzTolerance] = useLocalStorage('gt-hz-tolerance', 3);
-  const [targetString, setTargetString] = useState(null);
 
   const { isListening, pitch, signalStatus, error, start, stop } = usePitchDetection({
     tuningStrings: GUITAR_STRINGS,
-    targetString,
   });
 
   const cents        = pitch?.cents ?? null;
   const noteInfo     = pitch?.noteInfo;
   const guitarString = pitch?.guitarString;
 
-  // 목표 주파수 기준으로 Hz 오차를 계산해 IN TUNE 판정
   const targetFreq = guitarString?.freq ?? noteInfo?.targetFreq;
   const isInTune   = pitch != null && targetFreq != null
     && Math.abs(pitch.freq - targetFreq) < hzTolerance;
@@ -45,63 +39,60 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        <StringSelector
-          strings={GUITAR_STRINGS}
-          activeString={guitarString}
-          targetString={targetString}
-          onSelect={gs => setTargetString(prev => prev?.string === gs.string ? null : gs)}
-        />
-
-        <div className="note-display">
-          {error ? (
-            <ErrorBlock error={error} onRetry={start} />
-          ) : !isListening ? (
-            <p className="note-placeholder">시작 버튼을 눌러주세요</p>
-          ) : noteInfo ? (
-            <>
-              <div className={`note-name ${isInTune ? 'in-tune' : ''}`}>
-                {noteInfo.noteName}
-                <sup className="note-octave">{noteInfo.octave}</sup>
-              </div>
-              <div className="note-meta">
-                {guitarString && (
-                  <span className="string-label">
-                    {guitarString.string}번 줄 · {guitarString.name}
-                  </span>
+        {/* 중앙 콘텐츠 */}
+        <div className="main-content">
+          <div className="note-display">
+            {error ? (
+              <ErrorBlock error={error} onRetry={start} />
+            ) : !isListening ? (
+              <p className="note-placeholder">시작 버튼을 눌러주세요</p>
+            ) : noteInfo ? (
+              <>
+                <div className={`note-name ${isInTune ? 'in-tune' : ''}`}>
+                  {noteInfo.noteName}
+                  <sup className="note-octave">{noteInfo.octave}</sup>
+                </div>
+                <div className="note-meta">
+                  {guitarString && (
+                    <span className="string-label">
+                      {guitarString.string}번 줄 · {guitarString.name}
+                    </span>
+                  )}
+                  <span className="freq-display">{pitch.freq.toFixed(1)} Hz</span>
+                </div>
+                {isInTune && <div className="in-tune-badge">IN TUNE</div>}
+              </>
+            ) : (
+              <div className="status-block">
+                {SIGNAL_MESSAGES[signalStatus] && (
+                  <p className={SIGNAL_MESSAGES[signalStatus].cls}>
+                    {SIGNAL_MESSAGES[signalStatus].text}
+                  </p>
                 )}
-                <span className="freq-display">{pitch.freq.toFixed(1)} Hz</span>
               </div>
-              {isInTune && <div className="in-tune-badge">IN TUNE</div>}
-            </>
-          ) : (
-            <div className="status-block">
-              {SIGNAL_MESSAGES[signalStatus] && (
-                <p className={SIGNAL_MESSAGES[signalStatus].cls}>
-                  {SIGNAL_MESSAGES[signalStatus].text}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-
-        <TuningMeter cents={cents} isInTune={isInTune} />
-
-        <div className="sensitivity-wrap">
-          <div className="sensitivity-labels">
-            <span>엄격</span>
-            <span className="sensitivity-value">±{hzTolerance} Hz</span>
-            <span>유연</span>
+            )}
           </div>
-          <input
-            type="range"
-            className="sensitivity-slider"
-            min={1} max={5} step={1}
-            value={hzTolerance}
-            onChange={e => setHzTolerance(Number(e.target.value))}
-            style={{ '--fill': fillPct }}
-          />
+
+          <TuningMeter cents={cents} isInTune={isInTune} />
+
+          <div className="sensitivity-wrap">
+            <div className="sensitivity-labels">
+              <span>엄격</span>
+              <span className="sensitivity-value">±{hzTolerance} Hz</span>
+              <span>유연</span>
+            </div>
+            <input
+              type="range"
+              className="sensitivity-slider"
+              min={1} max={5} step={1}
+              value={hzTolerance}
+              onChange={e => setHzTolerance(Number(e.target.value))}
+              style={{ '--fill': fillPct }}
+            />
+          </div>
         </div>
 
+        {/* 하단 버튼 */}
         <button
           className={`toggle-btn ${isListening ? 'listening' : ''}`}
           onClick={isListening ? stop : start}
