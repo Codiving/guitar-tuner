@@ -30,12 +30,10 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="logo-icon">
-          <path d="M9 18V5l12-2v13" />
-          <circle cx="6" cy="18" r="3" />
-          <circle cx="18" cy="16" r="3" />
-        </svg>
-        <h1>Guitar Tuner</h1>
+        <div className="app-header-inner">
+          <img src="/favicon-48.png" width="28" height="28" alt="" className="logo-icon" />
+          <h1>Guitar Tuner</h1>
+        </div>
       </header>
 
       <main className="app-main">
@@ -51,9 +49,7 @@ export default function App() {
           <div className="note-display">
             {error ? (
               <ErrorBlock error={error} onRetry={start} />
-            ) : !isListening ? (
-              <p className="note-placeholder">시작 버튼을 눌러주세요</p>
-            ) : noteInfo ? (
+            ) : !isListening ? null : noteInfo ? (
               <>
                 <div className={`note-name ${isInTune ? 'in-tune' : ''}`}>
                   {noteInfo.noteName}
@@ -67,7 +63,15 @@ export default function App() {
                   )}
                   <span className="freq-display">{pitch.freq.toFixed(1)} Hz</span>
                 </div>
-                {isInTune && <div className="in-tune-badge">IN TUNE</div>}
+                <div className="in-tune-slot" aria-live="polite">
+                  {isInTune ? (
+                    <div className="in-tune-badge">IN TUNE</div>
+                  ) : (
+                    <div className="in-tune-badge in-tune-badge-placeholder" aria-hidden="true">
+                      IN TUNE
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <div className="status-block">
@@ -100,12 +104,43 @@ export default function App() {
 
         </div>
       </main>
+
     </div>
   );
 }
 
+const isNativeApp = typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
+
 function ErrorBlock({ error, onRetry }) {
   const isPermission = error === 'permission';
+  const isBusy = error === 'busy';
+  const isAccess = error === 'access';
+  const isUnsupported = error === 'unsupported';
+  let permissionDesc;
+  if (isPermission) {
+    if (isNativeApp) {
+      permissionDesc = '설정 > 앱 > Guitar Tuner > 권한 > 마이크에서 허용해주세요.';
+    } else {
+      permissionDesc = '브라우저 주소창의 자물쇠 아이콘을 눌러 마이크 권한을 허용해주세요.';
+    }
+  }
+  let title = '마이크를 찾을 수 없어요';
+  let desc = '마이크가 연결되어 있는지 확인 후 다시 시도해주세요.';
+
+  if (isPermission) {
+    title = '마이크 접근 권한 없음';
+    desc = permissionDesc;
+  } else if (isBusy) {
+    title = '마이크가 사용 중이에요';
+    desc = '다른 녹음 앱이나 통화 앱을 종료한 뒤 다시 시도해주세요.';
+  } else if (isAccess) {
+    title = '마이크 접근에 실패했어요';
+    desc = '권한은 허용되어 있지만 마이크를 열지 못했습니다. 앱을 완전히 종료한 뒤 다시 실행해보세요.';
+  } else if (isUnsupported) {
+    title = '현재 환경에서는 마이크를 사용할 수 없어요';
+    desc = '이 기기나 브라우저에서는 마이크 입력이 지원되지 않습니다.';
+  }
+
   return (
     <div className="error-block">
       <div className="error-icon">
@@ -116,12 +151,8 @@ function ErrorBlock({ error, onRetry }) {
           <line x1="8" y1="23" x2="16" y2="23" />
         </svg>
       </div>
-      <p className="error-title">{isPermission ? '마이크 접근 권한 없음' : '마이크를 찾을 수 없어요'}</p>
-      <p className="error-desc">
-        {isPermission
-          ? '브라우저 주소창의 자물쇠 아이콘을 눌러 마이크 권한을 허용해주세요.'
-          : '마이크가 연결되어 있는지 확인 후 다시 시도해주세요.'}
-      </p>
+      <p className="error-title">{title}</p>
+      <p className="error-desc">{desc}</p>
       <button className="retry-btn" onClick={onRetry}>다시 시도</button>
     </div>
   );

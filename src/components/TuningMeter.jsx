@@ -57,20 +57,28 @@ export function TuningMeter({ cents, isInTune = false }) {
         </svg>
       </div>
 
-      <div className={`cents-display ${isInTune ? 'in-tune' : ''}`}>
-        {hasCents ? (
-          <>
-            <span className="cents-value">{cents > 0 ? '+' : ''}{Math.round(cents)}</span>
-            <span className="cents-unit">cents</span>
-          </>
-        ) : (
-          <span className="cents-waiting">–</span>
-        )}
-      </div>
+      <div className="meter-feedback" aria-live="polite">
+        <div className={`cents-display ${isInTune ? 'in-tune' : ''} ${hasCents ? '' : 'is-empty'}`}>
+          {hasCents ? (
+            <>
+              <span className="cents-value">{cents > 0 ? '+' : ''}{Math.round(cents)}</span>
+              <span className="cents-unit">cents</span>
+            </>
+          ) : (
+            <span className="cents-waiting">–</span>
+          )}
+        </div>
 
-      {dir && (
-        <div className={`direction-hint ${dir.cls}`}>{dir.text}</div>
-      )}
+        <div className="direction-slot">
+          {dir ? (
+            <div className={`direction-hint ${dir.cls}`}>{dir.text}</div>
+          ) : (
+            <div className="direction-hint direction-hint-placeholder" aria-hidden="true">
+              정확해요!
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -30,6 +30,37 @@ export function usePitchDetection({
   const optionsRef = useRef({ tuningStrings, targetString });
   optionsRef.current = { tuningStrings, targetString };
 
+  const classifyMicError = useCallback(async (err) => {
+    const name = err?.name || '';
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+      return 'permission';
+    }
+    if (name === 'NotFoundError') {
+      return 'device';
+    }
+    if (name === 'NotReadableError') {
+      return 'busy';
+    }
+    if (name === 'AbortError' || name === 'InvalidStateError' || name === 'SecurityError') {
+      return 'access';
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      return 'unsupported';
+    }
+
+    try {
+      if (navigator.permissions?.query) {
+        const status = await navigator.permissions.query({ name: 'microphone' });
+        if (status.state === 'denied') return 'permission';
+        if (status.state === 'granted') return 'access';
+      }
+    } catch {
+      // Ignore permission API failures and fall through to a generic access error.
+    }
+
+    return 'access';
+  }, []);
+
   const detect = useCallback(() => {
     if (!analyserRef.current) return;
 
@@ -81,6 +112,12 @@ export function usePitchDetection({
 
   const start = useCallback(async () => {
     try {
+      setError(null);
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError('unsupported');
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
       });
@@ -105,10 +142,9 @@ export function usePitchDetection({
       setError(null);
       rafRef.current = requestAnimationFrame(detect);
     } catch (err) {
-      const isDenied = err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError';
-      setError(isDenied ? 'permission' : 'device');
+      setError(await classifyMicError(err));
     }
-  }, [detect]);
+  }, [classifyMicError, detect]);
 
   const stop = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);

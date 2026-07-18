@@ -19,12 +19,18 @@
   --green-glow:  rgba(34, 197, 94, 0.25);
 }
 
-html, body, #root { height: 100%; width: 100%; }
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+}
 
 .app {
-  min-height: 100vh;
-  max-width: 430px;
-  margin: 0 auto;
+  height: 100%;
   background: var(--bg);
   color: var(--text);
   display: flex;
@@ -35,14 +41,21 @@ html, body, #root { height: 100%; width: 100%; }
 
 /* ─── Header ─────────────────────────────── */
 .app-header {
+  padding-top: env(safe-area-inset-top, 0px);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.app-header-inner {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 18px 20px;
-  border-bottom: 1px solid var(--border);
+  max-width: 430px;
+  margin: 0 auto;
+  padding: 16px 20px;
 }
 
-.logo-icon { color: var(--accent); }
+.logo-icon { border-radius: 6px; }
 
 .app-header h1 {
   font-size: 17px;
@@ -53,10 +66,11 @@ html, body, #root { height: 100%; width: 100%; }
 /* ─── Main ───────────────────────────────── */
 .app-main {
   flex: 1;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 20px max(36px, env(safe-area-inset-bottom, 36px));
+  padding: 0 20px calc(36px + env(safe-area-inset-bottom, 0px));
 }
 
 .main-content {
@@ -67,6 +81,8 @@ html, body, #root { height: 100%; width: 100%; }
   justify-content: center;
   gap: 20px;
   width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
   padding-top: 28px;
 }
 
@@ -108,14 +124,17 @@ html, body, #root { height: 100%; width: 100%; }
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  min-height: 130px;
+  min-height: 260px;
+  width: 100%;
+  max-width: 320px;
   justify-content: center;
+  text-align: center;
 }
 
 .note-name {
-  font-size: 92px;
+  font-size: clamp(72px, 18vw, 92px);
   font-weight: 800;
-  letter-spacing: -4px;
+  letter-spacing: -0.05em;
   color: var(--text);
   line-height: 1;
   transition: color 0.25s ease, text-shadow 0.25s ease;
@@ -138,6 +157,9 @@ html, body, #root { height: 100%; width: 100%; }
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .string-label  { font-size: 12px; color: var(--text-muted); }
@@ -153,6 +175,17 @@ html, body, #root { height: 100%; width: 100%; }
   border: 1px solid rgba(34, 197, 94, 0.35);
   padding: 4px 14px;
   border-radius: 20px;
+}
+
+.in-tune-slot {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.in-tune-badge-placeholder {
+  visibility: hidden;
 }
 
 /* ─── Status messages ────────────────────── */
@@ -173,7 +206,27 @@ html, body, #root { height: 100%; width: 100%; }
 .meter-arc { width: 100%; }
 .meter-svg { width: 100%; height: auto; overflow: visible; }
 
-.cents-display { display: flex; align-items: baseline; gap: 4px; }
+.meter-feedback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 74px;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.cents-display {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-height: 28px;
+  justify-content: center;
+}
+
+.cents-display.is-empty {
+  min-height: 28px;
+}
 
 .cents-value {
   font-size: 22px;
@@ -194,12 +247,19 @@ html, body, #root { height: 100%; width: 100%; }
   letter-spacing: 0.3px;
   padding: 4px 14px;
   border-radius: 20px;
-  margin-top: 2px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dir-good { color: var(--green); background: var(--green-glow); }
 .dir-high { color: var(--amber); background: var(--amber-glow); }
 .dir-low  { color: #60a5fa; background: rgba(96, 165, 250, 0.15); }
+
+.direction-hint-placeholder {
+  visibility: hidden;
+}
 
 /* ─── Sensitivity slider ─────────────────── */
 .sensitivity-wrap {
