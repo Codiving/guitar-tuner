@@ -1,159 +1,371 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { CircleAlert, Mic, Play, Settings, Square } from 'lucide-react';
 import { usePitchDetection } from './hooks/usePitchDetection';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { TuningMeter } from './components/TuningMeter';
-import { GUITAR_STRINGS } from './utils/pitchDetector';
+import { TUNING_PRESETS } from './utils/pitchDetector';
 import './App.css';
 
+const A4_CHOICES = [432, 440, 442];
+const CENTS_CHOICES = [3, 5, 7, 10];
+
 const SIGNAL_MESSAGES = {
-  silent:   { text: '소리가 감지되지 않아요', cls: 'status-muted' },
-  weak:     { text: '입력이 너무 약해요',       cls: 'status-warning' },
-  unstable: { text: '감지 중...',                cls: 'status-muted' },
+  idle: { title: '대기 중', text: '마이크를 시작하면 음정을 보여줍니다.', tone: 'neutral' },
+  silent: { title: '무음', text: '입력이 너무 작습니다.', tone: 'muted' },
+  weak: { title: '입력 약함', text: '신호는 들어오지만 아직 안정적이지 않습니다.', tone: 'warn' },
+  unstable: { title: '불안정', text: '음정이 흔들립니다. 더 또렷한 소리를 내보세요.', tone: 'warn' },
+  detecting: { title: '감지 중', text: '음정을 추적하고 있습니다.', tone: 'neutral' },
 };
 
+const ERROR_MESSAGES = {
+  permission: {
+    title: '마이크 권한이 필요합니다',
+    text: '브라우저 또는 기기 설정에서 마이크 권한을 허용한 뒤 다시 시도하세요.',
+  },
+  device: {
+    title: '마이크를 찾을 수 없습니다',
+    text: '연결된 입력 장치가 있는지 확인한 뒤 다시 시도하세요.',
+  },
+  busy: {
+    title: '마이크가 사용 중입니다',
+    text: '다른 녹음 앱이나 통화 앱을 종료한 뒤 다시 시도하세요.',
+  },
+  access: {
+    title: '마이크를 열 수 없습니다',
+    text: '권한은 허용되어 있지만 장치를 여는 데 실패했습니다.',
+  },
+  unsupported: {
+    title: '현재 환경에서는 마이크를 사용할 수 없습니다',
+    text: '이 기기나 브라우저에서는 마이크 입력이 지원되지 않습니다.',
+  },
+};
+
+const isNativeApp = typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
+
 export default function App() {
-  const [hzTolerance, setHzTolerance] = useLocalStorage('gt-hz-tolerance', 3);
+  const [presetId, setPresetId] = useLocalStorage('gt-preset-id', 'standard');
+  const [targetMode, setTargetMode] = useLocalStorage('gt-target-mode', 'auto');
+  const [selectedStringNumber, setSelectedStringNumber] = useLocalStorage('gt-selected-string', 6);
+  const [referenceA4, setReferenceA4] = useLocalStorage('gt-reference-a4', 440);
+  const [centsTolerance, setCentsTolerance] = useLocalStorage('gt-cents-tolerance', 5);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const preset = TUNING_PRESETS.find((item) => item.id === presetId) ?? TUNING_PRESETS[0];
+  const tuningStrings = preset.strings;
+  const selectedString =
+    tuningStrings.find((item) => item.string === selectedStringNumber) ?? tuningStrings[0];
+  const targetString = targetMode === 'manual' ? selectedString : null;
 
   const { isListening, pitch, signalStatus, error, start, stop } = usePitchDetection({
-    tuningStrings: GUITAR_STRINGS,
+    tuningStrings,
+    targetString,
+    referenceA4,
+    accidental: preset.accidental,
   });
 
-  const cents        = pitch?.cents ?? null;
-  const noteInfo     = pitch?.noteInfo;
-  const guitarString = pitch?.guitarString;
+  const referenceToneTarget = targetString ?? pitch?.guitarString ?? selectedString;
 
-  const targetFreq = guitarString?.freq ?? noteInfo?.targetFreq;
-  const isInTune   = pitch != null && targetFreq != null
-    && Math.abs(pitch.freq - targetFreq) < hzTolerance;
+  const referenceAudioRef = useRef(null);
 
-  const fillPct = `${((hzTolerance - 1) / 4) * 100}%`;
+  const stopReferenceTone = useCallback(() => {
+    const ctx = referenceAudioRef.current;
+    if (!ctx) return;
+    referenceAudioRef.current = null;
+    ctx.close().catch(() => {});
+  }, []);
+
+  const playReferenceTone = useCallback(async () => {
+    const target = referenceToneTarget ?? tuningStrings[0];
+    if (!target) return;
+
+    stopReferenceTone();
+
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) return;
+    const ctx = new AudioContextCtor();
+    referenceAudioRef.current = ctx;
+
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = target.freq;
+
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.35);
+
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + 1.45);
+
+    oscillator.onended = () => {
+      ctx.close().catch(() => {});
+      if (referenceAudioRef.current === ctx) {
+        referenceAudioRef.current = null;
+      }
+    };
+  }, [referenceToneTarget, stopReferenceTone, tuningStrings]);
+
+  useEffect(() => {
+    return () => {
+      stop();
+      stopReferenceTone();
+    };
+  }, [stop, stopReferenceTone]);
+
+  const cents = pitch?.cents ?? null;
+  const isInTune = cents != null && Math.abs(cents) <= centsTolerance;
+  const activeStringNumber = pitch?.guitarString?.string ?? selectedStringNumber;
+  const currentTarget = targetString ?? pitch?.guitarString ?? null;
+  const currentTargetLabel = currentTarget
+    ? `${currentTarget.string}번 줄 · ${currentTarget.name}`
+    : '자동 감지';
+  const detectedNote = pitch?.noteInfo ? `${pitch.noteInfo.noteName}${pitch.noteInfo.octave}` : '---';
+  const currentFreqLabel = pitch ? `${pitch.freq.toFixed(1)} Hz` : '대기 중';
+  const directionText = getDirectionText(cents, isInTune);
+  const statusInfo = error
+    ? ERROR_MESSAGES[error] ?? ERROR_MESSAGES.access
+    : SIGNAL_MESSAGES[signalStatus] ?? SIGNAL_MESSAGES.idle;
+
+  const handleStringSelect = (stringNumber) => {
+    setTargetMode('manual');
+    setSelectedStringNumber(stringNumber);
+  };
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <div className="app-header-inner">
+    <div className="app-shell">
+      <header className="topbar">
+        <div className="brand-block">
           <img src="/favicon-48.png" width="28" height="28" alt="" className="logo-icon" />
-          <h1>Guitar Tuner</h1>
+          <div className="brand-copy">
+            <h1 className="brand-kicker">guitar tuner</h1>
+          </div>
+        </div>
+
+        <div className="header-actions">
+          <button
+            type="button"
+            className={`settings-toggle ${settingsOpen ? 'active' : ''}`}
+            onClick={() => setSettingsOpen((value) => !value)}
+            aria-expanded={settingsOpen}
+            aria-controls="tuner-settings"
+            aria-label="설정"
+          >
+            <Settings aria-hidden="true" />
+          </button>
         </div>
       </header>
 
-      <main className="app-main">
-        {/* 중앙 콘텐츠 */}
-        <div className="main-content">
-          <button
-            className={`toggle-btn ${isListening ? 'listening' : ''}`}
-            onClick={isListening ? stop : start}
-          >
-            {isListening ? <><span className="btn-dot" />감지 중지</> : '튜닝 시작'}
-          </button>
-
-          <div className="note-display">
-            {error ? (
-              <ErrorBlock error={error} onRetry={start} />
-            ) : !isListening ? null : noteInfo ? (
-              <>
-                <div className={`note-name ${isInTune ? 'in-tune' : ''}`}>
-                  {noteInfo.noteName}
-                  <sup className="note-octave">{noteInfo.octave}</sup>
-                </div>
-                <div className="note-meta">
-                  {guitarString && (
-                    <span className="string-label">
-                      {guitarString.string}번 줄 · {guitarString.name}
-                    </span>
-                  )}
-                  <span className="freq-display">{pitch.freq.toFixed(1)} Hz</span>
-                </div>
-                <div className="in-tune-slot" aria-live="polite">
-                  {isInTune ? (
-                    <div className="in-tune-badge">IN TUNE</div>
-                  ) : (
-                    <div className="in-tune-badge in-tune-badge-placeholder" aria-hidden="true">
-                      IN TUNE
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="status-block">
-                {SIGNAL_MESSAGES[signalStatus] && (
-                  <p className={SIGNAL_MESSAGES[signalStatus].cls}>
-                    {SIGNAL_MESSAGES[signalStatus].text}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          <TuningMeter cents={cents} isInTune={isInTune} />
-
-          <div className="sensitivity-wrap">
-            <div className="sensitivity-labels">
-              <span>엄격</span>
-              <span className="sensitivity-value">±{hzTolerance} Hz</span>
-              <span>유연</span>
+      <main className="workspace">
+        <section className="tuner-panel">
+          <div className="tuner-topline">
+            <div className="hero-title-row">
+              <span className="hero-label">현재 대상</span>
+              <strong>{currentTargetLabel}</strong>
             </div>
-            <input
-              type="range"
-              className="sensitivity-slider"
-              min={1} max={5} step={1}
-              value={hzTolerance}
-              onChange={e => setHzTolerance(Number(e.target.value))}
-              style={{ '--fill': fillPct }}
-            />
           </div>
 
-        </div>
-      </main>
+          {error ? (
+            <ErrorBlock error={error} onRetry={start} />
+          ) : (
+            <>
+              <div className="status-chip-row">
+                <span className="status-chip">{statusInfo.title}</span>
+              </div>
 
+              <div className="pitch-stage">
+                <div className={`note-name ${isInTune ? 'in-tune' : ''}`}>
+                  {detectedNote}
+                </div>
+                <div className="pitch-meta">
+                  <span>{currentFreqLabel}</span>
+                  <span>{directionText}</span>
+                </div>
+              <div className="pitch-badges">
+                  {isInTune ? <span className="mini-badge success">정확함</span> : null}
+                </div>
+              </div>
+
+              <TuningMeter cents={cents} isInTune={isInTune} />
+
+              <div className="action-row">
+                <button
+                  type="button"
+                  className={`toggle-btn ${isListening ? 'listening' : ''}`}
+                  onClick={isListening ? stop : start}
+                >
+                  {isListening ? (
+                    <>
+                      <Square className="btn-icon" aria-hidden="true" />
+                      감지 중지
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="btn-icon" aria-hidden="true" />
+                      튜닝 시작
+                    </>
+                  )}
+                </button>
+
+                <button type="button" className="ghost-btn" onClick={playReferenceTone}>
+                  <Play className="btn-icon" aria-hidden="true" />
+                  기준음 재생
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+
+        <section
+          id="tuner-settings"
+          className={`settings-panel ${settingsOpen ? 'is-open' : 'is-closed'}`}
+          hidden={!settingsOpen}
+        >
+          <div className="settings-body">
+            <div className="panel">
+              <div className="panel-heading">
+                <h2>튜닝 프리셋</h2>
+                <p>표준, 드롭 D, 반음 내림, 오픈 G를 전환할 수 있습니다.</p>
+              </div>
+              <div className="preset-list">
+                {TUNING_PRESETS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`preset-pill ${preset.id === item.id ? 'active' : ''}`}
+                    onClick={() => setPresetId(item.id)}
+                  >
+                    <strong>{item.name}</strong>
+                    <span>{item.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="panel">
+              <div className="panel-heading">
+                <h2>대상 줄</h2>
+                <p>자동 감지 또는 직접 선택을 사용할 수 있습니다.</p>
+              </div>
+
+              <div className="mode-toggle">
+                <button
+                  type="button"
+                  className={`mode-btn ${targetMode === 'auto' ? 'active' : ''}`}
+                  onClick={() => setTargetMode('auto')}
+                >
+                  자동 감지
+                </button>
+                <button
+                  type="button"
+                  className={`mode-btn ${targetMode === 'manual' ? 'active' : ''}`}
+                  onClick={() => setTargetMode('manual')}
+                >
+                  수동 선택
+                </button>
+              </div>
+
+              <div className="string-grid">
+                {tuningStrings.map((stringItem) => {
+                  const isSelected = stringItem.string === selectedStringNumber;
+                  const isActive = stringItem.string === activeStringNumber;
+                  return (
+                    <button
+                      key={`${preset.id}-${stringItem.string}`}
+                      type="button"
+                      className={`string-item ${isSelected ? 'selected' : ''} ${isActive ? 'active' : ''}`}
+                      onClick={() => handleStringSelect(stringItem.string)}
+                    >
+                      <span className="string-num">{stringItem.string}</span>
+                      <span className="string-note">{stringItem.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="panel">
+              <div className="panel-heading">
+                <h2>보정값</h2>
+                <p>기준 주파수와 튜닝 허용폭을 조정합니다.</p>
+              </div>
+
+              <div className="setting-group">
+                <div className="setting-label-row">
+                  <span>A4 기준</span>
+                  <strong>{referenceA4} Hz</strong>
+                </div>
+                <label className="select-wrap">
+                  <span className="sr-only">A4 기준 선택</span>
+                  <select
+                    className="select-field"
+                    value={referenceA4}
+                    onChange={(event) => setReferenceA4(Number(event.target.value))}
+                  >
+                    {A4_CHOICES.map((value) => (
+                      <option key={value} value={value}>
+                        {value} Hz
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="setting-group">
+                <div className="setting-label-row">
+                  <span>정확 판정</span>
+                  <strong>±{centsTolerance} cents</strong>
+                </div>
+                <input
+                  type="range"
+                  className="sensitivity-slider"
+                  min={CENTS_CHOICES[0]}
+                  max={CENTS_CHOICES[CENTS_CHOICES.length - 1]}
+                  step={1}
+                  value={centsTolerance}
+                  onChange={(event) => setCentsTolerance(Number(event.target.value))}
+                  style={{ '--fill': `${((centsTolerance - CENTS_CHOICES[0]) / (CENTS_CHOICES[CENTS_CHOICES.length - 1] - CENTS_CHOICES[0])) * 100}%` }}
+                />
+                <div className="slider-caption">
+                  <span>엄격</span>
+                  <span>유연</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
 
-const isNativeApp = typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
+function getDirectionText(cents, isInTune) {
+  if (cents == null) return '연주를 시작하세요';
+  if (isInTune) return '정확해요';
+  if (cents > 0) return '조금 낮추세요';
+  return '조금 올리세요';
+}
 
 function ErrorBlock({ error, onRetry }) {
-  const isPermission = error === 'permission';
-  const isBusy = error === 'busy';
-  const isAccess = error === 'access';
-  const isUnsupported = error === 'unsupported';
-  let permissionDesc;
-  if (isPermission) {
-    if (isNativeApp) {
-      permissionDesc = '설정 > 앱 > Guitar Tuner > 권한 > 마이크에서 허용해주세요.';
-    } else {
-      permissionDesc = '브라우저 주소창의 자물쇠 아이콘을 눌러 마이크 권한을 허용해주세요.';
-    }
-  }
-  let title = '마이크를 찾을 수 없어요';
-  let desc = '마이크가 연결되어 있는지 확인 후 다시 시도해주세요.';
+  const info = ERROR_MESSAGES[error] ?? ERROR_MESSAGES.access;
+  const permissionDesc = isNativeApp
+    ? '설정 > 앱 > 기타 튜너 > 권한 > 마이크에서 허용해주세요.'
+    : '브라우저 주소창의 자물쇠 아이콘을 눌러 마이크 권한을 허용해주세요.';
 
-  if (isPermission) {
-    title = '마이크 접근 권한 없음';
-    desc = permissionDesc;
-  } else if (isBusy) {
-    title = '마이크가 사용 중이에요';
-    desc = '다른 녹음 앱이나 통화 앱을 종료한 뒤 다시 시도해주세요.';
-  } else if (isAccess) {
-    title = '마이크 접근에 실패했어요';
-    desc = '권한은 허용되어 있지만 마이크를 열지 못했습니다. 앱을 완전히 종료한 뒤 다시 실행해보세요.';
-  } else if (isUnsupported) {
-    title = '현재 환경에서는 마이크를 사용할 수 없어요';
-    desc = '이 기기나 브라우저에서는 마이크 입력이 지원되지 않습니다.';
-  }
+  const description =
+    error === 'permission' ? permissionDesc : info.text;
 
   return (
     <div className="error-block">
-      <div className="error-icon">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-          <line x1="12" y1="19" x2="12" y2="23" />
-          <line x1="8" y1="23" x2="16" y2="23" />
-        </svg>
+      <div className="error-icon" aria-hidden="true">
+        <CircleAlert aria-hidden="true" />
       </div>
-      <p className="error-title">{title}</p>
-      <p className="error-desc">{desc}</p>
-      <button className="retry-btn" onClick={onRetry}>다시 시도</button>
+      <p className="error-title">{info.title}</p>
+      <p className="error-desc">{description}</p>
+      <button type="button" className="retry-btn" onClick={onRetry}>
+        다시 시도
+      </button>
     </div>
   );
 }
