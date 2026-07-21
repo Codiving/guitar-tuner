@@ -9,6 +9,58 @@ export const GUITAR_STRINGS = [
   { name: 'E4', note: 'E', octave: 4, freq: 329.63, string: 1 },
 ];
 
+export const TUNING_PRESETS = [
+  {
+    id: 'standard',
+    name: '표준 튜닝',
+    description: 'E A D G B E',
+    accidental: 'sharp',
+    strings: GUITAR_STRINGS,
+  },
+  {
+    id: 'drop-d',
+    name: '드롭 D',
+    description: 'D A D G B E',
+    accidental: 'sharp',
+    strings: [
+      { name: 'D2', note: 'D', octave: 2, freq: 73.42, string: 6 },
+      { name: 'A2', note: 'A', octave: 2, freq: 110.0, string: 5 },
+      { name: 'D3', note: 'D', octave: 3, freq: 146.83, string: 4 },
+      { name: 'G3', note: 'G', octave: 3, freq: 196.0, string: 3 },
+      { name: 'B3', note: 'B', octave: 3, freq: 246.94, string: 2 },
+      { name: 'E4', note: 'E', octave: 4, freq: 329.63, string: 1 },
+    ],
+  },
+  {
+    id: 'half-step-down',
+    name: '반음 내림',
+    description: 'Eb Ab Db Gb Bb Eb',
+    accidental: 'flat',
+    strings: [
+      { name: 'Eb2', note: 'D#', octave: 2, freq: 77.78, string: 6 },
+      { name: 'Ab2', note: 'G#', octave: 2, freq: 103.83, string: 5 },
+      { name: 'Db3', note: 'C#', octave: 3, freq: 138.59, string: 4 },
+      { name: 'Gb3', note: 'F#', octave: 3, freq: 185.0, string: 3 },
+      { name: 'Bb3', note: 'A#', octave: 3, freq: 233.08, string: 2 },
+      { name: 'Eb4', note: 'D#', octave: 4, freq: 311.13, string: 1 },
+    ],
+  },
+  {
+    id: 'open-g',
+    name: '오픈 G',
+    description: 'D G D G B D',
+    accidental: 'sharp',
+    strings: [
+      { name: 'D2', note: 'D', octave: 2, freq: 73.42, string: 6 },
+      { name: 'G2', note: 'G', octave: 2, freq: 98.0, string: 5 },
+      { name: 'D3', note: 'D', octave: 3, freq: 146.83, string: 4 },
+      { name: 'G3', note: 'G', octave: 3, freq: 196.0, string: 3 },
+      { name: 'B3', note: 'B', octave: 3, freq: 246.94, string: 2 },
+      { name: 'D4', note: 'D', octave: 4, freq: 293.66, string: 1 },
+    ],
+  },
+];
+
 // Returns { status: 'silent'|'weak'|'unstable'|'ok', freq, rms }
 export function autoCorrelate(buffer, sampleRate, { rmsMin = 0.015, rmsWeak = 0.04, confidence = 0.5 } = {}) {
   const SIZE = buffer.length;
