@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CircleAlert, Mic, Play, Settings, Square } from 'lucide-react';
+import { ChevronDown, CircleAlert, Mic, Play, Settings, Square } from 'lucide-react';
 import { usePitchDetection } from './hooks/usePitchDetection';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { TuningMeter } from './components/TuningMeter';
@@ -164,25 +164,20 @@ export default function App() {
               <span className="hero-label">현재 대상</span>
               <strong>{currentTargetLabel}</strong>
             </div>
+            <span className="status-chip">{statusInfo.title}</span>
           </div>
 
           {error ? (
             <ErrorBlock error={error} onRetry={start} />
           ) : (
             <>
-              <div className="status-chip-row">
-                <span className="status-chip">{statusInfo.title}</span>
-              </div>
-
               <div className="pitch-stage">
-                <div className={`note-name ${isInTune ? 'in-tune' : ''}`}>
-                  {detectedNote}
-                </div>
+                <div className={`note-name ${isInTune ? 'in-tune' : ''}`}>{detectedNote}</div>
                 <div className="pitch-meta">
                   <span>{currentFreqLabel}</span>
                   <span>{directionText}</span>
                 </div>
-              <div className="pitch-badges">
+                <div className="pitch-badges">
                   {isInTune ? <span className="mini-badge success">정확함</span> : null}
                 </div>
               </div>
@@ -309,6 +304,7 @@ export default function App() {
                       </option>
                     ))}
                   </select>
+                  <ChevronDown className="select-icon" aria-hidden="true" />
                 </label>
               </div>
 

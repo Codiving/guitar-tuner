@@ -166,10 +166,9 @@
 }
 
 .tuner-topline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 10px;
 }
 
@@ -191,14 +190,8 @@
   line-height: 1.4;
 }
 
-.status-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
 .status-chip {
+  justify-self: end;
   display: inline-flex;
   align-items: center;
   min-height: 30px;
@@ -553,13 +546,14 @@
 }
 
 .select-wrap {
+  position: relative;
   display: block;
 }
 
 .select-field {
   width: 100%;
   min-height: 44px;
-  padding: 0 12px;
+  padding: 0 44px 0 12px;
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface-2);
@@ -567,10 +561,28 @@
   font-size: 14px;
   font-weight: 600;
   outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.select-field::-ms-expand {
+  display: none;
 }
 
 .select-field:focus {
   border-color: var(--border-strong);
+}
+
+.select-icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
 }
 
 .sensitivity-slider {
@@ -674,8 +686,8 @@
     justify-content: flex-end;
   }
 
-  .tuner-topline {
-    flex-direction: column;
+  .status-chip {
+    align-self: start;
   }
 
   .hero-label,
