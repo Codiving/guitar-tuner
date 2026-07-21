@@ -14,8 +14,10 @@
 }
 
 .app-shell {
+  --topbar-height: calc(70px + env(safe-area-inset-top, 0px));
+  position: relative;
   height: 100dvh;
-  overflow-y: auto;
+  overflow: hidden;
   overflow-x: hidden;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: auto;
@@ -31,13 +33,18 @@
 }
 
 .topbar {
-  min-height: 70px;
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 20;
+  height: var(--topbar-height);
   padding-top: calc(12px + env(safe-area-inset-top, 0px));
   padding-bottom: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  background: linear-gradient(to bottom, rgba(15, 20, 27, 0.98), rgba(15, 20, 27, 0.92));
+  backdrop-filter: blur(10px);
 }
 
 .brand-block {
@@ -152,10 +159,15 @@
 }
 
 .workspace {
+  height: calc(100% - var(--topbar-height));
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: none;
   padding-top: 20px;
   padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
   display: grid;
   gap: 16px;
+  margin-top: var(--topbar-height);
 }
 
 .tuner-panel,
@@ -739,6 +751,10 @@
   .topbar,
   .workspace {
     padding-inline: 14px;
+  }
+
+  .app-shell {
+    --topbar-height: calc(64px + env(safe-area-inset-top, 0px));
   }
 
   .topbar {
