@@ -112,7 +112,23 @@
   transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
+.settings-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .settings-toggle svg,
+.settings-back svg,
 .btn-icon,
 .error-icon svg {
   width: 18px;
@@ -416,6 +432,29 @@
   padding: 14px;
 }
 
+.settings-page {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-hero {
+  display: grid;
+  gap: 6px;
+  padding: 4px 4px 0;
+}
+
+.settings-hero h2 {
+  font-size: clamp(1.6rem, 2.6vw, 2rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.settings-hero p {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .settings-body {
   display: grid;
   gap: 12px;
@@ -432,7 +471,8 @@
   gap: 4px;
 }
 
-.panel-heading h2 {
+.panel-heading h2,
+.panel-heading h3 {
   font-size: 16px;
   letter-spacing: -0.03em;
 }
@@ -725,6 +765,12 @@
   .brand-kicker {
     font-size: 11px;
     letter-spacing: 0.12em;
+  }
+
+  .settings-back {
+    min-height: 40px;
+    padding-inline: 10px;
+    font-size: 13px;
   }
 
   .tuner-panel,

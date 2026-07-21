@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, CircleAlert, Mic, Play, Settings, Square } from 'lucide-react';
+import { ArrowLeft, ChevronDown, CircleAlert, Mic, Play, Settings, Square } from 'lucide-react';
 import { usePitchDetection } from './hooks/usePitchDetection';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { TuningMeter } from './components/TuningMeter';
@@ -48,7 +48,7 @@ export default function App() {
   const [selectedStringNumber, setSelectedStringNumber] = useLocalStorage('gt-selected-string', 6);
   const [referenceA4, setReferenceA4] = useLocalStorage('gt-reference-a4', 440);
   const [centsTolerance, setCentsTolerance] = useLocalStorage('gt-cents-tolerance', 5);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeView, setActiveView] = useState('tuner');
 
   const preset = TUNING_PRESETS.find((item) => item.id === presetId) ?? TUNING_PRESETS[0];
   const tuningStrings = preset.strings;
@@ -133,8 +133,11 @@ export default function App() {
     setSelectedStringNumber(stringNumber);
   };
 
+  const openSettings = () => setActiveView('settings');
+  const closeSettings = () => setActiveView('tuner');
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${activeView === 'settings' ? 'settings-view' : ''}`}>
       <header className="topbar">
         <div className="brand-block">
           <img src="/favicon-48.png" width="28" height="28" alt="" className="logo-icon" />
@@ -144,193 +147,196 @@ export default function App() {
         </div>
 
         <div className="header-actions">
-          <button
-            type="button"
-            className={`settings-toggle ${settingsOpen ? 'active' : ''}`}
-            onClick={() => setSettingsOpen((value) => !value)}
-            aria-expanded={settingsOpen}
-            aria-controls="tuner-settings"
-            aria-label="설정"
-          >
-            <Settings aria-hidden="true" />
-          </button>
+          {activeView === 'settings' ? (
+            <button type="button" className="settings-back" onClick={closeSettings} aria-label="뒤로">
+              <ArrowLeft aria-hidden="true" />
+              <span>뒤로</span>
+            </button>
+          ) : (
+            <button type="button" className="settings-toggle" onClick={openSettings} aria-label="설정">
+              <Settings aria-hidden="true" />
+            </button>
+          )}
         </div>
       </header>
 
       <main className="workspace">
-        <section className="tuner-panel">
-          <div className="tuner-topline">
-            <div className="hero-title-row">
-              <span className="hero-label">현재 대상</span>
-              <strong>{currentTargetLabel}</strong>
+        {activeView === 'tuner' ? (
+          <section className="tuner-panel">
+            <div className="tuner-topline">
+              <div className="hero-title-row">
+                <span className="hero-label">현재 대상</span>
+                <strong>{currentTargetLabel}</strong>
+              </div>
+              <span className="status-chip">{statusInfo.title}</span>
             </div>
-            <span className="status-chip">{statusInfo.title}</span>
-          </div>
 
-          {error ? (
-            <ErrorBlock error={error} onRetry={start} />
-          ) : (
-            <>
-              <div className="pitch-stage">
-                <div className={`note-name ${isInTune ? 'in-tune' : ''}`}>{detectedNote}</div>
-                <div className="pitch-meta">
-                  <span>{currentFreqLabel}</span>
-                  <span>{directionText}</span>
+            {error ? (
+              <ErrorBlock error={error} onRetry={start} />
+            ) : (
+              <>
+                <div className="pitch-stage">
+                  <div className={`note-name ${isInTune ? 'in-tune' : ''}`}>{detectedNote}</div>
+                  <div className="pitch-meta">
+                    <span>{currentFreqLabel}</span>
+                    <span>{directionText}</span>
+                  </div>
+                  <div className="pitch-badges">
+                    {isInTune ? <span className="mini-badge success">정확함</span> : null}
+                  </div>
                 </div>
-                <div className="pitch-badges">
-                  {isInTune ? <span className="mini-badge success">정확함</span> : null}
-                </div>
-              </div>
 
-              <TuningMeter cents={cents} isInTune={isInTune} />
+                <TuningMeter cents={cents} isInTune={isInTune} />
 
-              <div className="action-row">
-                <button
-                  type="button"
-                  className={`toggle-btn ${isListening ? 'listening' : ''}`}
-                  onClick={isListening ? stop : start}
-                >
-                  {isListening ? (
-                    <>
-                      <Square className="btn-icon" aria-hidden="true" />
-                      감지 중지
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="btn-icon" aria-hidden="true" />
-                      튜닝 시작
-                    </>
-                  )}
-                </button>
-
-                <button type="button" className="ghost-btn" onClick={playReferenceTone}>
-                  <Play className="btn-icon" aria-hidden="true" />
-                  기준음 재생
-                </button>
-              </div>
-            </>
-          )}
-        </section>
-
-        <section
-          id="tuner-settings"
-          className={`settings-panel ${settingsOpen ? 'is-open' : 'is-closed'}`}
-          hidden={!settingsOpen}
-        >
-          <div className="settings-body">
-            <div className="panel">
-              <div className="panel-heading">
-                <h2>튜닝 프리셋</h2>
-                <p>표준, 드롭 D, 반음 내림, 오픈 G를 전환할 수 있습니다.</p>
-              </div>
-              <div className="preset-list">
-                {TUNING_PRESETS.map((item) => (
+                <div className="action-row">
                   <button
-                    key={item.id}
                     type="button"
-                    className={`preset-pill ${preset.id === item.id ? 'active' : ''}`}
-                    onClick={() => setPresetId(item.id)}
+                    className={`toggle-btn ${isListening ? 'listening' : ''}`}
+                    onClick={isListening ? stop : start}
                   >
-                    <strong>{item.name}</strong>
-                    <span>{item.description}</span>
+                    {isListening ? (
+                      <>
+                        <Square className="btn-icon" aria-hidden="true" />
+                        감지 중지
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="btn-icon" aria-hidden="true" />
+                        튜닝 시작
+                      </>
+                    )}
                   </button>
-                ))}
-              </div>
+
+                  <button type="button" className="ghost-btn" onClick={playReferenceTone}>
+                    <Play className="btn-icon" aria-hidden="true" />
+                    기준음 재생
+                  </button>
+                </div>
+              </>
+            )}
+          </section>
+        ) : (
+          <section className="settings-page" aria-labelledby="settings-title">
+            <div className="settings-hero">
+              <h2 id="settings-title">설정</h2>
+              <p>튜닝 프리셋과 감지 기준을 조정합니다.</p>
             </div>
 
-            <div className="panel">
-              <div className="panel-heading">
-                <h2>대상 줄</h2>
-                <p>자동 감지 또는 직접 선택을 사용할 수 있습니다.</p>
-              </div>
-
-              <div className="mode-toggle">
-                <button
-                  type="button"
-                  className={`mode-btn ${targetMode === 'auto' ? 'active' : ''}`}
-                  onClick={() => setTargetMode('auto')}
-                >
-                  자동 감지
-                </button>
-                <button
-                  type="button"
-                  className={`mode-btn ${targetMode === 'manual' ? 'active' : ''}`}
-                  onClick={() => setTargetMode('manual')}
-                >
-                  수동 선택
-                </button>
-              </div>
-
-              <div className="string-grid">
-                {tuningStrings.map((stringItem) => {
-                  const isSelected = stringItem.string === selectedStringNumber;
-                  const isActive = stringItem.string === activeStringNumber;
-                  return (
+            <div className="settings-body">
+              <div className="panel">
+                <div className="panel-heading">
+                  <h3>튜닝 프리셋</h3>
+                  <p>표준, 드롭 D, 반음 내림, 오픈 G를 전환할 수 있습니다.</p>
+                </div>
+                <div className="preset-list">
+                  {TUNING_PRESETS.map((item) => (
                     <button
-                      key={`${preset.id}-${stringItem.string}`}
+                      key={item.id}
                       type="button"
-                      className={`string-item ${isSelected ? 'selected' : ''} ${isActive ? 'active' : ''}`}
-                      onClick={() => handleStringSelect(stringItem.string)}
+                      className={`preset-pill ${preset.id === item.id ? 'active' : ''}`}
+                      onClick={() => setPresetId(item.id)}
                     >
-                      <span className="string-num">{stringItem.string}</span>
-                      <span className="string-note">{stringItem.name}</span>
+                      <strong>{item.name}</strong>
+                      <span>{item.description}</span>
                     </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="panel">
-              <div className="panel-heading">
-                <h2>보정값</h2>
-                <p>기준 주파수와 튜닝 허용폭을 조정합니다.</p>
-              </div>
-
-              <div className="setting-group">
-                <div className="setting-label-row">
-                  <span>A4 기준</span>
-                  <strong>{referenceA4} Hz</strong>
+                  ))}
                 </div>
-                <label className="select-wrap">
-                  <span className="sr-only">A4 기준 선택</span>
-                  <select
-                    className="select-field"
-                    value={referenceA4}
-                    onChange={(event) => setReferenceA4(Number(event.target.value))}
+              </div>
+
+              <div className="panel">
+                <div className="panel-heading">
+                  <h3>대상 줄</h3>
+                  <p>자동 감지 또는 직접 선택을 사용할 수 있습니다.</p>
+                </div>
+
+                <div className="mode-toggle">
+                  <button
+                    type="button"
+                    className={`mode-btn ${targetMode === 'auto' ? 'active' : ''}`}
+                    onClick={() => setTargetMode('auto')}
                   >
-                    {A4_CHOICES.map((value) => (
-                      <option key={value} value={value}>
-                        {value} Hz
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="select-icon" aria-hidden="true" />
-                </label>
+                    자동 감지
+                  </button>
+                  <button
+                    type="button"
+                    className={`mode-btn ${targetMode === 'manual' ? 'active' : ''}`}
+                    onClick={() => setTargetMode('manual')}
+                  >
+                    수동 선택
+                  </button>
+                </div>
+
+                <div className="string-grid">
+                  {tuningStrings.map((stringItem) => {
+                    const isSelected = stringItem.string === selectedStringNumber;
+                    const isActive = stringItem.string === activeStringNumber;
+                    return (
+                      <button
+                        key={`${preset.id}-${stringItem.string}`}
+                        type="button"
+                        className={`string-item ${isSelected ? 'selected' : ''} ${isActive ? 'active' : ''}`}
+                        onClick={() => handleStringSelect(stringItem.string)}
+                      >
+                        <span className="string-num">{stringItem.string}</span>
+                        <span className="string-note">{stringItem.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              <div className="setting-group">
-                <div className="setting-label-row">
-                  <span>정확 판정</span>
-                  <strong>±{centsTolerance} cents</strong>
+              <div className="panel">
+                <div className="panel-heading">
+                  <h3>보정값</h3>
+                  <p>기준 주파수와 튜닝 허용폭을 조정합니다.</p>
                 </div>
-                <input
-                  type="range"
-                  className="sensitivity-slider"
-                  min={CENTS_CHOICES[0]}
-                  max={CENTS_CHOICES[CENTS_CHOICES.length - 1]}
-                  step={1}
-                  value={centsTolerance}
-                  onChange={(event) => setCentsTolerance(Number(event.target.value))}
-                  style={{ '--fill': `${((centsTolerance - CENTS_CHOICES[0]) / (CENTS_CHOICES[CENTS_CHOICES.length - 1] - CENTS_CHOICES[0])) * 100}%` }}
-                />
-                <div className="slider-caption">
-                  <span>엄격</span>
-                  <span>유연</span>
+
+                <div className="setting-group">
+                  <div className="setting-label-row">
+                    <span>A4 기준</span>
+                    <strong>{referenceA4} Hz</strong>
+                  </div>
+                  <label className="select-wrap">
+                    <span className="sr-only">A4 기준 선택</span>
+                    <select
+                      className="select-field"
+                      value={referenceA4}
+                      onChange={(event) => setReferenceA4(Number(event.target.value))}
+                    >
+                      {A4_CHOICES.map((value) => (
+                        <option key={value} value={value}>
+                          {value} Hz
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="select-icon" aria-hidden="true" />
+                  </label>
+                </div>
+
+                <div className="setting-group">
+                  <div className="setting-label-row">
+                    <span>정확 판정</span>
+                    <strong>±{centsTolerance} cents</strong>
+                  </div>
+                  <input
+                    type="range"
+                    className="sensitivity-slider"
+                    min={CENTS_CHOICES[0]}
+                    max={CENTS_CHOICES[CENTS_CHOICES.length - 1]}
+                    step={1}
+                    value={centsTolerance}
+                    onChange={(event) => setCentsTolerance(Number(event.target.value))}
+                    style={{ '--fill': `${((centsTolerance - CENTS_CHOICES[0]) / (CENTS_CHOICES[CENTS_CHOICES.length - 1] - CENTS_CHOICES[0])) * 100}%` }}
+                  />
+                  <div className="slider-caption">
+                    <span>엄격</span>
+                    <span>유연</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </main>
     </div>
   );
