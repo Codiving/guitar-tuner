@@ -142,7 +142,7 @@ export default function App() {
   const closeSettings = () => setActiveView('tuner');
 
   return (
-    <div className={`app-shell ${activeView === 'settings' ? 'settings-view' : ''}`}>
+    <div className="app-shell">
       <header className="topbar">
         <div className="brand-block">
           <img src="/favicon-48.png" width="28" height="28" alt="" className="logo-icon" />
@@ -220,11 +220,10 @@ export default function App() {
             )}
           </section>
         ) : (
-          <section className="settings-page" aria-labelledby="settings-title">
-            <div className="settings-hero">
-              <h2 id="settings-title">설정</h2>
-              <p>튜닝 프리셋과 감지 기준을 조정합니다.</p>
-            </div>
+          <section aria-labelledby="settings-title">
+            <h2 id="settings-title" className="sr-only">
+              설정
+            </h2>
 
             <div className="settings-body">
               <div className="panel">

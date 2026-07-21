@@ -27,14 +27,14 @@
 
 .topbar,
 .workspace {
-  width: min(100%, 980px);
-  margin: 0 auto;
-  padding-inline: 20px;
+  width: 100%;
+  margin: 0;
+  padding-inline: clamp(16px, 2vw, 28px);
 }
 
 .topbar {
   position: fixed;
-  left: 50%;
+  left: 0;
   top: 0;
   z-index: 20;
   height: var(--topbar-height);
@@ -48,7 +48,6 @@
   border-bottom: 1px solid rgba(58, 69, 84, 0.7);
   box-shadow: 0 1px 0 rgba(10, 14, 26, 0.65), 0 12px 28px rgba(7, 10, 16, 0.18);
   backdrop-filter: blur(8px);
-  transform: translateX(-50%);
 }
 
 .brand-block {
@@ -96,7 +95,6 @@
   min-width: 42px;
 }
 
-.status-pill,
 .settings-toggle {
   min-height: 42px;
   padding: 0;
@@ -106,12 +104,6 @@
   color: var(--text-muted);
   font-size: 14px;
   font-weight: 700;
-}
-
-.settings-toggle.active {
-  color: var(--text);
-  border-color: var(--border-strong);
-  background: #1d2531;
 }
 
 .settings-toggle {
@@ -135,44 +127,17 @@
   stroke-width: 1.9;
 }
 
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  white-space: nowrap;
-}
-
-.status-pill.warn,
-.status-pill.error {
-  color: var(--text);
-}
-
-.status-pill.warn {
-  border-color: rgba(214, 179, 110, 0.35);
-}
-
-.status-pill.error {
-  border-color: rgba(212, 139, 152, 0.35);
-}
-
-.status-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
 .workspace {
   position: fixed;
-  left: 50%;
+  left: 0;
   top: var(--topbar-height);
   bottom: 0;
-  transform: translateX(-50%);
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: none;
-  padding-top: 20px;
-  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  align-content: start;
+  padding-top: 16px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   display: grid;
   gap: 16px;
 }
@@ -187,6 +152,7 @@
 
 .tuner-panel {
   display: grid;
+  align-content: start;
   gap: 14px;
   padding: 16px;
 }
@@ -436,29 +402,6 @@
   display: grid;
   gap: 14px;
   padding: 14px;
-}
-
-.settings-page {
-  display: grid;
-  gap: 14px;
-}
-
-.settings-hero {
-  display: grid;
-  gap: 6px;
-  padding: 4px 4px 0;
-}
-
-.settings-hero h2 {
-  font-size: clamp(1.6rem, 2.6vw, 2rem);
-  line-height: 1.05;
-  letter-spacing: -0.04em;
-}
-
-.settings-hero p {
-  color: var(--text-muted);
-  font-size: 14px;
-  line-height: 1.5;
 }
 
 .settings-body {
@@ -751,6 +694,40 @@
 
   .mode-toggle {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 961px) {
+  .tuner-panel {
+    gap: 12px;
+    padding: 18px;
+  }
+
+  .pitch-stage {
+    gap: 8px;
+  }
+
+  .meter-container {
+    gap: 6px;
+  }
+
+  .action-row {
+    justify-content: flex-start;
+  }
+
+  .toggle-btn,
+  .ghost-btn {
+    min-width: 180px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .note-name {
+    font-size: clamp(2.7rem, 4.8vw, 4.1rem);
+  }
+
+  .tuner-panel {
+    padding: 20px;
   }
 }
 
