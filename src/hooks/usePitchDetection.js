@@ -12,6 +12,7 @@ const DETECT_CONFIG = { rmsMin: 0.015, rmsWeak: 0.04, confidence: 0.5, history: 
 export function usePitchDetection({
   tuningStrings = GUITAR_STRINGS,
   targetString  = null,
+  referenceA4   = 440,
 } = {}) {
   const [isListening,  setIsListening]  = useState(false);
   const [pitch,        setPitch]        = useState(null);
@@ -79,7 +80,7 @@ export function usePitchDetection({
       return;
     }
 
-    const rawNoteNum = Math.round(12 * Math.log2(result.freq / 440) + 69);
+    const rawNoteNum = Math.round(12 * Math.log2(result.freq / referenceA4) + 69);
     if (lastNoteNumRef.current !== null && Math.abs(rawNoteNum - lastNoteNumRef.current) >= 1) {
       freqHistoryRef.current = [];
     }
@@ -92,7 +93,7 @@ export function usePitchDetection({
     const smoothedFreq = sorted[Math.floor(sorted.length / 2)];
 
     const { tuningStrings: strings, targetString: target } = optionsRef.current;
-    const noteInfo = getNoteInfo(smoothedFreq);
+    const noteInfo = getNoteInfo(smoothedFreq, referenceA4);
 
     let cents, guitarString;
     if (target) {

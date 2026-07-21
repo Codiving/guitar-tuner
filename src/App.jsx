@@ -1,13 +1,45 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ChevronDown, CircleAlert, Mic, Play, Settings, Square } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChevronDown,
+  CircleAlert,
+  Mic,
+  Pencil,
+  Play,
+  Settings,
+  Square,
+  Trash2,
+} from 'lucide-react';
 import { usePitchDetection } from './hooks/usePitchDetection';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { TuningMeter } from './components/TuningMeter';
-import { TUNING_PRESETS } from './utils/pitchDetector';
+import {
+  DEFAULT_TUNING_PRESETS,
+  buildTuningStrings,
+  parseTuningText,
+} from './utils/pitchDetector';
 import './App.css';
 
 const A4_CHOICES = [432, 440, 442];
 const CENTS_CHOICES = [3, 5, 7, 10];
+const DEFAULT_TUNING_TEXT = 'E2 A2 D3 G3 B3 E4';
+const PRESET_STORAGE_KEY = 'gt-tuning-presets';
+const MAX_PRESETS = 8;
+
+function createPresetId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `preset-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function cloneDefaultPresets() {
+  return DEFAULT_TUNING_PRESETS.map((preset) => ({ ...preset }));
+}
+
+function getPresetPreview(preset) {
+  return preset.tuningText;
+}
 
 const SIGNAL_MESSAGES = {
   idle: { title: '대기 중', text: '마이크를 시작하면 음정을 보여줍니다.', tone: 'neutral' },
@@ -48,10 +80,21 @@ export default function App() {
   const [selectedStringNumber, setSelectedStringNumber] = useLocalStorage('gt-selected-string', 6);
   const [referenceA4, setReferenceA4] = useLocalStorage('gt-reference-a4', 440);
   const [centsTolerance, setCentsTolerance] = useLocalStorage('gt-cents-tolerance', 5);
+  const [savedPresets, setSavedPresets] = useLocalStorage(
+    PRESET_STORAGE_KEY,
+    cloneDefaultPresets()
+  );
   const [activeView, setActiveView] = useState('tuner');
+  const [presetEditorOpen, setPresetEditorOpen] = useState(false);
+  const [editorMode, setEditorMode] = useState('create');
+  const [editingPresetId, setEditingPresetId] = useState(null);
+  const [presetNameDraft, setPresetNameDraft] = useState('');
+  const [presetTuningDraft, setPresetTuningDraft] = useState(DEFAULT_TUNING_TEXT);
+  const [presetError, setPresetError] = useState('');
 
-  const preset = TUNING_PRESETS.find((item) => item.id === presetId) ?? TUNING_PRESETS[0];
-  const tuningStrings = preset.strings;
+  const preset = savedPresets.find((item) => item.id === presetId) ?? savedPresets[0];
+  const canCreatePreset = savedPresets.length < MAX_PRESETS;
+  const tuningStrings = buildTuningStrings(preset?.tuningText ?? DEFAULT_TUNING_TEXT, referenceA4) ?? [];
   const selectedString =
     tuningStrings.find((item) => item.string === selectedStringNumber) ?? tuningStrings[0];
   const targetString = targetMode === 'manual' ? selectedString : null;
@@ -60,7 +103,6 @@ export default function App() {
     tuningStrings,
     targetString,
     referenceA4,
-    accidental: preset.accidental,
   });
 
   const referenceToneTarget = targetString ?? pitch?.guitarString ?? selectedString;
@@ -119,6 +161,16 @@ export default function App() {
     workspaceRef.current?.scrollTo({ top: 0, behavior: 'auto' });
   }, [activeView]);
 
+  useEffect(() => {
+    if (!savedPresets.length) {
+      setSavedPresets(cloneDefaultPresets());
+      return;
+    }
+    if (!savedPresets.some((item) => item.id === presetId)) {
+      setPresetId(savedPresets[0].id);
+    }
+  }, [presetId, savedPresets, setPresetId, setSavedPresets]);
+
   const cents = pitch?.cents ?? null;
   const isInTune = cents != null && Math.abs(cents) <= centsTolerance;
   const activeStringNumber = pitch?.guitarString?.string ?? selectedStringNumber;
@@ -140,6 +192,92 @@ export default function App() {
 
   const openSettings = () => setActiveView('settings');
   const closeSettings = () => setActiveView('tuner');
+  const openPresetEditor = (presetToEdit = null) => {
+    if (!presetToEdit && !canCreatePreset) {
+      setPresetError(`프리셋은 최대 ${MAX_PRESETS}개까지 만들 수 있습니다.`);
+      setPresetEditorOpen(true);
+      setEditorMode('create');
+      setEditingPresetId(null);
+      setPresetNameDraft('');
+      setPresetTuningDraft(DEFAULT_TUNING_TEXT);
+      return;
+    }
+    const fallback = presetToEdit ?? {
+      id: createPresetId(),
+      name: '내 프리셋',
+      tuningText: DEFAULT_TUNING_TEXT,
+    };
+    setPresetEditorOpen(true);
+    setEditorMode(presetToEdit ? 'edit' : 'create');
+    setEditingPresetId(presetToEdit?.id ?? null);
+    setPresetNameDraft(fallback.name);
+    setPresetTuningDraft(fallback.tuningText);
+    setPresetError('');
+  };
+
+  const closePresetEditor = () => {
+    setPresetEditorOpen(false);
+    setEditorMode('create');
+    setEditingPresetId(null);
+    setPresetNameDraft('');
+    setPresetTuningDraft(DEFAULT_TUNING_TEXT);
+    setPresetError('');
+  };
+
+  const savePreset = () => {
+    const name = presetNameDraft.trim();
+    const tuningText = presetTuningDraft.trim().replace(/\s+/g, ' ');
+    const parsed = parseTuningText(tuningText);
+
+    if (!name) {
+      setPresetError('프리셋 이름을 입력하세요.');
+      return;
+    }
+
+    if (!parsed) {
+      setPresetError('튜닝은 "E2 A2 D3 G3 B3 E4"처럼 6개 항목으로 입력해야 합니다.');
+      return;
+    }
+
+    if (!editingPresetId && savedPresets.length >= MAX_PRESETS) {
+      setPresetError(`프리셋은 최대 ${MAX_PRESETS}개까지 만들 수 있습니다.`);
+      return;
+    }
+
+    const nextPreset = {
+      id: editingPresetId ?? createPresetId(),
+      name,
+      tuningText: parsed.map((item) => item.name).join(' '),
+      accidental: parsed.some((item) => item.name.includes('b')) ? 'flat' : 'sharp',
+    };
+
+    setSavedPresets((current) => {
+      const exists = current.some((item) => item.id === nextPreset.id);
+      if (exists) {
+        return current.map((item) => (item.id === nextPreset.id ? nextPreset : item));
+      }
+      return [...current, nextPreset];
+    });
+    setPresetId(nextPreset.id);
+    setTargetMode('manual');
+    setSelectedStringNumber(6);
+    closePresetEditor();
+  };
+
+  const editPreset = (presetToEdit) => {
+    openPresetEditor(presetToEdit);
+  };
+
+  const deletePreset = (presetToDelete) => {
+    if (savedPresets.length <= 1) return;
+    const confirmed = window.confirm(`"${presetToDelete.name}" 프리셋을 삭제할까요?`);
+    if (!confirmed) return;
+
+    setSavedPresets((current) => current.filter((item) => item.id !== presetToDelete.id));
+    if (editingPresetId === presetToDelete.id) {
+      closePresetEditor();
+    }
+  };
 
   return (
     <div className="app-shell">
@@ -229,22 +367,104 @@ export default function App() {
               <div className="panel">
                 <div className="panel-heading">
                   <h3>튜닝 프리셋</h3>
-                  <p>표준, 드롭 D, 반음 내림, 오픈 G를 전환할 수 있습니다.</p>
+                  <p>기본 프리셋을 고르거나, 이름과 튜닝을 직접 편집할 수 있습니다.</p>
                 </div>
                 <div className="preset-list">
-                  {TUNING_PRESETS.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={`preset-pill ${preset.id === item.id ? 'active' : ''}`}
-                      onClick={() => setPresetId(item.id)}
-                    >
-                      <strong>{item.name}</strong>
-                      <span>{item.description}</span>
-                    </button>
-                  ))}
+                  {savedPresets.map((item) => {
+                    const isActive = preset?.id === item.id;
+                    return (
+                      <div key={item.id} className={`preset-card ${isActive ? 'active' : ''}`}>
+                        <div className="preset-card-top">
+                          <button
+                            type="button"
+                            className="preset-select"
+                            onClick={() => setPresetId(item.id)}
+                          >
+                            <strong>{item.name}</strong>
+                            <span>{getPresetPreview(item)}</span>
+                          </button>
+                          <div className="preset-icon-actions">
+                            <button
+                              type="button"
+                              className="icon-action"
+                              onClick={() => editPreset(item)}
+                              aria-label={`${item.name} 편집`}
+                            >
+                              <Pencil aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              className="icon-action danger"
+                              onClick={() => deletePreset(item)}
+                              disabled={savedPresets.length <= 1}
+                              aria-label={`${item.name} 삭제`}
+                            >
+                              <Trash2 aria-hidden="true" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
+                <button
+                  type="button"
+                  className="ghost-btn preset-new-btn"
+                  onClick={() => openPresetEditor()}
+                  disabled={!canCreatePreset}
+                >
+                  새 프리셋 추가
+                </button>
+                {!canCreatePreset ? (
+                  <p className="preset-limit-hint">프리셋은 최대 {MAX_PRESETS}개까지 저장할 수 있습니다.</p>
+                ) : null}
               </div>
+
+              {presetEditorOpen ? (
+                <div className="panel">
+                  <div className="panel-heading">
+                    <h3>{editorMode === 'edit' ? '프리셋 편집' : '프리셋 추가'}</h3>
+                    <p>이름과 6개 줄 튜닝을 직접 입력합니다.</p>
+                  </div>
+
+                  <div className="editor-form">
+                    <label className="field-row">
+                      <span>프리셋 이름</span>
+                      <input
+                        className="text-field"
+                        type="text"
+                        value={presetNameDraft}
+                        onChange={(event) => setPresetNameDraft(event.target.value)}
+                        placeholder="예: Drop C"
+                      />
+                    </label>
+
+                    <label className="field-row">
+                      <span>튜닝</span>
+                      <input
+                        className="text-field"
+                        type="text"
+                        value={presetTuningDraft}
+                        onChange={(event) => setPresetTuningDraft(event.target.value)}
+                        placeholder="E2 A2 D3 G3 B3 E4"
+                      />
+                    </label>
+
+                    <p className="field-hint">형식: 낮은 줄부터 높은 줄까지 6개를 공백으로 구분해 입력하세요.</p>
+
+                    {presetError ? <p className="field-error">{presetError}</p> : null}
+
+                    <div className="editor-actions">
+                      <button type="button" className="toggle-btn" onClick={savePreset}>
+                        {editorMode === 'edit' ? '변경 저장' : '프리셋 저장'}
+                      </button>
+                      <button type="button" className="ghost-btn" onClick={closePresetEditor}>
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="panel">
                 <div className="panel-heading">

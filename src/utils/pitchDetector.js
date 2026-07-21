@@ -1,65 +1,119 @@
 const NOTE_STRINGS_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const NOTE_STRINGS_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+const NOTE_TO_SEMITONE = {
+  C: 0,
+  'C#': 1,
+  Db: 1,
+  D: 2,
+  'D#': 3,
+  Eb: 3,
+  E: 4,
+  F: 5,
+  'F#': 6,
+  Gb: 6,
+  G: 7,
+  'G#': 8,
+  Ab: 8,
+  A: 9,
+  'A#': 10,
+  Bb: 10,
+  B: 11,
+};
 
 export const GUITAR_STRINGS = [
-  { name: 'E2', note: 'E', octave: 2, freq: 82.41,  string: 6 },
-  { name: 'A2', note: 'A', octave: 2, freq: 110.0,  string: 5 },
-  { name: 'D3', note: 'D', octave: 3, freq: 146.83, string: 4 },
-  { name: 'G3', note: 'G', octave: 3, freq: 196.0,  string: 3 },
-  { name: 'B3', note: 'B', octave: 3, freq: 246.94, string: 2 },
-  { name: 'E4', note: 'E', octave: 4, freq: 329.63, string: 1 },
+  { name: 'E2', note: 'E', octave: 2, string: 6 },
+  { name: 'A2', note: 'A', octave: 2, string: 5 },
+  { name: 'D3', note: 'D', octave: 3, string: 4 },
+  { name: 'G3', note: 'G', octave: 3, string: 3 },
+  { name: 'B3', note: 'B', octave: 3, string: 2 },
+  { name: 'E4', note: 'E', octave: 4, string: 1 },
 ];
 
-export const TUNING_PRESETS = [
+export const DEFAULT_TUNING_PRESETS = [
   {
     id: 'standard',
     name: '표준 튜닝',
-    description: 'E A D G B E',
+    tuningText: 'E2 A2 D3 G3 B3 E4',
     accidental: 'sharp',
-    strings: GUITAR_STRINGS,
   },
   {
     id: 'drop-d',
     name: '드롭 D',
-    description: 'D A D G B E',
+    tuningText: 'D2 A2 D3 G3 B3 E4',
     accidental: 'sharp',
-    strings: [
-      { name: 'D2', note: 'D', octave: 2, freq: 73.42, string: 6 },
-      { name: 'A2', note: 'A', octave: 2, freq: 110.0, string: 5 },
-      { name: 'D3', note: 'D', octave: 3, freq: 146.83, string: 4 },
-      { name: 'G3', note: 'G', octave: 3, freq: 196.0, string: 3 },
-      { name: 'B3', note: 'B', octave: 3, freq: 246.94, string: 2 },
-      { name: 'E4', note: 'E', octave: 4, freq: 329.63, string: 1 },
-    ],
   },
   {
     id: 'half-step-down',
     name: '반음 내림',
-    description: 'Eb Ab Db Gb Bb Eb',
+    tuningText: 'Eb2 Ab2 Db3 Gb3 Bb3 Eb4',
     accidental: 'flat',
-    strings: [
-      { name: 'Eb2', note: 'D#', octave: 2, freq: 77.78, string: 6 },
-      { name: 'Ab2', note: 'G#', octave: 2, freq: 103.83, string: 5 },
-      { name: 'Db3', note: 'C#', octave: 3, freq: 138.59, string: 4 },
-      { name: 'Gb3', note: 'F#', octave: 3, freq: 185.0, string: 3 },
-      { name: 'Bb3', note: 'A#', octave: 3, freq: 233.08, string: 2 },
-      { name: 'Eb4', note: 'D#', octave: 4, freq: 311.13, string: 1 },
-    ],
   },
   {
     id: 'open-g',
     name: '오픈 G',
-    description: 'D G D G B D',
+    tuningText: 'D2 G2 D3 G3 B3 D4',
     accidental: 'sharp',
-    strings: [
-      { name: 'D2', note: 'D', octave: 2, freq: 73.42, string: 6 },
-      { name: 'G2', note: 'G', octave: 2, freq: 98.0, string: 5 },
-      { name: 'D3', note: 'D', octave: 3, freq: 146.83, string: 4 },
-      { name: 'G3', note: 'G', octave: 3, freq: 196.0, string: 3 },
-      { name: 'B3', note: 'B', octave: 3, freq: 246.94, string: 2 },
-      { name: 'D4', note: 'D', octave: 4, freq: 293.66, string: 1 },
-    ],
   },
 ];
+
+export function noteToMidi(note, octave) {
+  if (!Number.isInteger(octave)) return null;
+  const normalized = String(note ?? '').replace('♯', '#').replace('♭', 'b');
+  const semitone = NOTE_TO_SEMITONE[normalized];
+  if (semitone == null) return null;
+  return (octave + 1) * 12 + semitone;
+}
+
+export function midiToFreq(midi, a4 = 440) {
+  return a4 * Math.pow(2, (midi - 69) / 12);
+}
+
+export function formatNoteName(note, octave, accidental = 'sharp') {
+  const normalized = String(note ?? '').replace('♯', '#').replace('♭', 'b');
+  const semitone = NOTE_TO_SEMITONE[normalized];
+  if (semitone == null || !Number.isInteger(octave)) return null;
+  const name = accidental === 'flat' ? NOTE_STRINGS_FLAT[semitone] : NOTE_STRINGS_SHARP[semitone];
+  return `${name}${octave}`;
+}
+
+export function parseTuningText(tuningText) {
+  const tokens = String(tuningText ?? '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (tokens.length !== 6) return null;
+
+  const strings = tokens.map((token, index) => {
+    const match = token.match(/^([A-Ga-g])([#b♯♭]?)(-?\d+)$/);
+    if (!match) return null;
+
+    const note = `${match[1].toUpperCase()}${match[2].replace('♯', '#').replace('♭', 'b')}`;
+    const octave = Number(match[3]);
+    const midi = noteToMidi(note, octave);
+    if (midi == null) return null;
+
+    return {
+      name: formatNoteName(note, octave, note.includes('b') ? 'flat' : 'sharp') ?? token,
+      note,
+      octave,
+      midi,
+      string: 6 - index,
+    };
+  });
+
+  if (strings.some((item) => item == null)) return null;
+  return strings;
+}
+
+export function buildTuningStrings(tuningText, a4 = 440) {
+  const strings = parseTuningText(tuningText);
+  if (!strings) return null;
+  return strings.map((item) => ({
+    ...item,
+    freq: midiToFreq(item.midi, a4),
+  }));
+}
 
 // Returns { status: 'silent'|'weak'|'unstable'|'ok', freq, rms }
 export function autoCorrelate(buffer, sampleRate, { rmsMin = 0.015, rmsWeak = 0.04, confidence = 0.5 } = {}) {

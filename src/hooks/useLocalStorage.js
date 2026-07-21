@@ -11,10 +11,13 @@ export function useLocalStorage(key, defaultValue) {
   });
 
   const setAndStore = useCallback((newValue) => {
-    setValue(newValue);
-    try {
-      localStorage.setItem(key, JSON.stringify(newValue));
-    } catch {}
+    setValue((current) => {
+      const nextValue = typeof newValue === 'function' ? newValue(current) : newValue;
+      try {
+        localStorage.setItem(key, JSON.stringify(nextValue));
+      } catch {}
+      return nextValue;
+    });
   }, [key]);
 
   return [value, setAndStore];
