@@ -580,13 +580,7 @@
   height: 4px;
   border-radius: 999px;
   outline: none;
-  background: linear-gradient(
-    to right,
-    #aab3c0 0%,
-    #aab3c0 var(--fill, 42%),
-    #2a3442 var(--fill, 42%),
-    #2a3442 100%
-  );
+  background: #2a3442;
 }
 
 .sensitivity-slider::-webkit-slider-thumb {

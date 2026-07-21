@@ -18,18 +18,8 @@ export function TuningMeter({ cents, isInTune = false }) {
     <div className="meter-container">
       <div className="meter-arc">
         <svg viewBox="0 0 200 110" className="meter-svg">
-          <defs>
-            <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#ef4444" />
-              <stop offset="40%" stopColor="#f59e0b" />
-              <stop offset="50%" stopColor="#22c55e" />
-              <stop offset="60%" stopColor="#f59e0b" />
-              <stop offset="100%" stopColor="#ef4444" />
-            </linearGradient>
-          </defs>
-
           <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#1e293b" strokeWidth="8" strokeLinecap="round" />
-          <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#arcGrad)" strokeWidth="8" strokeLinecap="round" opacity="0.4" />
+          <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#94a3b8" strokeWidth="8" strokeLinecap="round" opacity="0.22" />
           <line x1="100" y1="100" x2="100" y2="28" stroke="#334155" strokeWidth="2" />
 
           {[-50, -25, 0, 25, 50].map((val) => {
