@@ -34,7 +34,8 @@
 
 .topbar {
   position: fixed;
-  inset: 0 0 auto 0;
+  left: 50%;
+  top: 0;
   z-index: 20;
   height: var(--topbar-height);
   padding-top: calc(12px + env(safe-area-inset-top, 0px));
@@ -43,8 +44,11 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  background: linear-gradient(to bottom, rgba(15, 20, 27, 0.98), rgba(15, 20, 27, 0.92));
-  backdrop-filter: blur(10px);
+  background: rgba(15, 20, 27, 0.995);
+  border-bottom: 1px solid rgba(58, 69, 84, 0.7);
+  box-shadow: 0 1px 0 rgba(10, 14, 26, 0.65), 0 12px 28px rgba(7, 10, 16, 0.18);
+  backdrop-filter: blur(8px);
+  transform: translateX(-50%);
 }
 
 .brand-block {
@@ -159,7 +163,11 @@
 }
 
 .workspace {
-  height: calc(100% - var(--topbar-height));
+  position: fixed;
+  left: 50%;
+  top: var(--topbar-height);
+  bottom: 0;
+  transform: translateX(-50%);
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: none;
@@ -167,7 +175,6 @@
   padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
   display: grid;
   gap: 16px;
-  margin-top: var(--topbar-height);
 }
 
 .tuner-panel,

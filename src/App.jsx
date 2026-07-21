@@ -66,6 +66,7 @@ export default function App() {
   const referenceToneTarget = targetString ?? pitch?.guitarString ?? selectedString;
 
   const referenceAudioRef = useRef(null);
+  const workspaceRef = useRef(null);
 
   const stopReferenceTone = useCallback(() => {
     const ctx = referenceAudioRef.current;
@@ -114,6 +115,10 @@ export default function App() {
     };
   }, [stop, stopReferenceTone]);
 
+  useEffect(() => {
+    workspaceRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+  }, [activeView]);
+
   const cents = pitch?.cents ?? null;
   const isInTune = cents != null && Math.abs(cents) <= centsTolerance;
   const activeStringNumber = pitch?.guitarString?.string ?? selectedStringNumber;
@@ -159,7 +164,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="workspace">
+      <main ref={workspaceRef} className="workspace">
         {activeView === 'tuner' ? (
           <section className="tuner-panel">
             <div className="tuner-topline">
