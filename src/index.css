@@ -7,13 +7,17 @@
 html {
   height: 100%;
   background: #0a0e1a;
+  overscroll-behavior: none;
 }
 
 body {
   height: 100%;
   margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 #root {
   height: 100%;
+  overflow: hidden;
 }

@@ -14,7 +14,11 @@
 }
 
 .app-shell {
-  min-height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
   color: var(--text);
   background: var(--bg);
 }
