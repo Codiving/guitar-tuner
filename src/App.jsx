@@ -148,9 +148,8 @@ export default function App() {
 
         <div className="header-actions">
           {activeView === 'settings' ? (
-            <button type="button" className="settings-back" onClick={closeSettings} aria-label="뒤로">
+            <button type="button" className="settings-toggle" onClick={closeSettings} aria-label="뒤로">
               <ArrowLeft aria-hidden="true" />
-              <span>뒤로</span>
             </button>
           ) : (
             <button type="button" className="settings-toggle" onClick={openSettings} aria-label="설정">

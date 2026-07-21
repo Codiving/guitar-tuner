@@ -31,7 +31,9 @@
 }
 
 .topbar {
-  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  min-height: 70px;
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  padding-bottom: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -78,8 +80,9 @@
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   flex: 0 0 auto;
+  min-width: 42px;
 }
 
 .status-pill,
@@ -112,23 +115,7 @@
   transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
-.settings-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 42px;
-  padding: 0 14px 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
 .settings-toggle svg,
-.settings-back svg,
 .btn-icon,
 .error-icon svg {
   width: 18px;
@@ -765,12 +752,6 @@
   .brand-kicker {
     font-size: 11px;
     letter-spacing: 0.12em;
-  }
-
-  .settings-back {
-    min-height: 40px;
-    padding-inline: 10px;
-    font-size: 13px;
   }
 
   .tuner-panel,
